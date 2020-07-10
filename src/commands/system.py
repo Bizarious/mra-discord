@@ -19,16 +19,17 @@ class System(commands.Cog):
 
     @commands.command()
     @is_it_me()
-    async def ignore(self, ctx, subject, name):
+    async def ignore(self, ctx, subject, *, name):
         if subject == "guild":
             guild_id = self.bot.get_guild_id(name)
             self.bot.permit.add_ignore("guilds", guild_id)
             await ctx.send(f'Added {name} to ignore list. '
                            f'None of the commands from this server will be executed anymore.')
         elif subject == "channel":
-            channel_id = self.bot.get_channel_id(name)
+            name = name.split("$")
+            channel_id = self.bot.get_channel_id(name[0], name[1])
             self.bot.permit.add_ignore("channels", channel_id)
-            await ctx.send(f'Added {name} to ignore list. '
+            await ctx.send(f'Added {name[1]} in {name[0]} to ignore list. '
                            f'None of the commands from this channel will be executed anymore.')
         elif subject == "user":
             user_id = self.bot.get_user_id(name)
@@ -38,7 +39,7 @@ class System(commands.Cog):
 
     @commands.command()
     @is_it_me()
-    async def attention(self, ctx, subject, name):
+    async def attention(self, ctx, subject, *, name):
         if subject == "guild":
             guild_id = self.bot.get_guild_id(name)
             if guild_id not in self.bot.permit.guilds:
@@ -47,11 +48,12 @@ class System(commands.Cog):
             await ctx.send(f'Removed {name} from ignore list. '
                            f'Commands from this server are executed again.')
         elif subject == "channel":
-            channel_id = self.bot.get_channel_id(name)
+            name = name.split("$")
+            channel_id = self.bot.get_channel_id(name[0], name[1])
             if channel_id not in self.bot.permit.channels:
                 raise RuntimeError("Channel is not in the ignore list.")
             self.bot.permit.remove_ignore("channels", channel_id)
-            await ctx.send(f'Removed {name} from ignore list. '
+            await ctx.send(f'Removed {name[1]} in {name[0]} from ignore list. '
                            f'Commands from this channel are executed again.')
         elif subject == "user":
             user_id = self.bot.get_user_id(name)

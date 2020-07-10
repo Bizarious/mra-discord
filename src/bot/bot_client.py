@@ -38,10 +38,10 @@ class BotClient(commands.Bot):
                 return g.id
         raise RuntimeError("Server not found")
 
-    def get_channel_id(self, name):
+    def get_channel_id(self, guild, channel):
         for g in self.guilds:
             for c in g.channels:
-                if c.name == name:
+                if g.name == guild and c.name == channel:
                     return c.id
         raise RuntimeError("Channel not found")
 
