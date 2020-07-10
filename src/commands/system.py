@@ -1,3 +1,4 @@
+import os
 from discord.ext import commands
 from permissions import is_it_me
 
@@ -36,6 +37,12 @@ class System(commands.Cog):
             self.bot.permit.add_ignore("users", user_id)
             await ctx.send(f'Added {name} to ignore list. '
                            f'None of the commands from this user will be executed anymore.')
+
+    @commands.command()
+    @is_it_me()
+    async def update(self, ctx):
+        os.system("git pull --ff-only")
+        ctx.send("Updated. You may need to restart")
 
     @commands.command()
     @is_it_me()
