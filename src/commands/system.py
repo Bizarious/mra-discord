@@ -42,7 +42,7 @@ class System(commands.Cog):
     @is_it_me()
     async def update(self, ctx):
         os.system("git pull --ff-only")
-        ctx.send("Updated. You may need to restart")
+        await ctx.send("Updated. You may need to restart")
 
     @commands.command()
     @is_it_me()
