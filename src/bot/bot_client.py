@@ -15,9 +15,6 @@ class BotClient(commands.Bot):
 
     async def on_ready(self):
         print("online")
-        user = self.get_user(525020069772656660).mention
-        await self.get_channel(641372848815996929).send(f'{user} This bot is in early stage of development. '
-                                                        f'Please do not pentest now.')
 
     async def on_message(self, message):
         if message.guild.id not in self.permit.guilds and message.channel.id not in self.permit.channels and \

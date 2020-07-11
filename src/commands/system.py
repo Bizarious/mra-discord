@@ -41,8 +41,8 @@ class System(commands.Cog):
     @commands.command()
     @is_it_me()
     async def update(self, ctx):
-        os.system("git pull --ff-only")
-        await ctx.send("Updated. You may need to restart")
+        status = os.popen("git pull --ff-only").read()
+        await ctx.send(status)
 
     @commands.command()
     @is_it_me()
@@ -69,6 +69,30 @@ class System(commands.Cog):
             self.bot.permit.remove_ignore("users", user_id)
             await ctx.send(f'Removed {name} from ignore list. '
                            f'Commands from this user are executed again.')
+
+    @commands.command("ignore-status")
+    @is_it_me()
+    async def ignore_status(self, ctx):
+        void = "  "
+        message = f"```Currently ignored:\n\n" \
+                  f"Servers:\n"
+        for s in self.bot.permit.guilds:
+            message += void
+            message += self.bot.get_guild(s).name
+            message += "\n"
+        message += "Channels:\n"
+        for c in self.bot.permit.channels:
+            message += void
+            channel = self.bot.get_channel(c)
+            message += f'{channel.name}/{channel.guild.name}'
+            message += "\n"
+        message += "Users:\n"
+        for u in self.bot.permit.users:
+            message += void
+            message += self.bot.get_user(u).name
+            message += "\n"
+        message += "```"
+        await ctx.send(message)
 
 
 def setup(bot):
