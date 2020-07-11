@@ -6,14 +6,18 @@ from permissions import PermissionsDict
 
 class BotClient(commands.Bot):
     def __init__(self):
-        commands.Bot.__init__(self, command_prefix=".")
+        self.default_prefix = "."
+        self.data = Data()
+        self.prefixes = self.data.load_prefixes()
+        commands.Bot.__init__(self, command_prefix=self.get_prefix)
         self.cogs_path = "./commands"
         self.register_cogs()
         self.restart = False
-        self.data = Data()
         self.permit = PermissionsDict(self.data)
 
+    # Events
     async def on_ready(self):
+        self.check_prefixes()
         print("online")
 
     async def on_message(self, message):
@@ -21,11 +25,28 @@ class BotClient(commands.Bot):
                 message.author.id not in self.permit.users:
             await self.process_commands(message)
 
+    async def on_guild_join(self, guild):
+        self.change_prefix(self.default_prefix, guild.id)
+
     async def on_command_error(self, ctx, exception):
         if isinstance(exception, commands.errors.CheckFailure):
             await ctx.send("No Permissions")
         else:
             await ctx.send(exception)
+
+    # utility functions
+    async def get_prefix(self, message):
+        return self.prefixes[str(message.guild.id)]
+
+    def check_prefixes(self):
+        for g in self.guilds:
+            if str(g.id) not in self.prefixes:
+                self.prefixes[str(g.id)] = self.default_prefix
+        self.data.save_prefixes(self.prefixes)
+
+    def change_prefix(self, prefix, guild_id):
+        self.prefixes[str(guild_id)] = prefix
+        self.data.save_prefixes(self.prefixes)
 
     def register_cogs(self):
         for filename in os.listdir(self.cogs_path):
