@@ -19,7 +19,6 @@ class BotClient(commands.Bot):
     async def on_ready(self):
         self.check_prefixes()
         print("online")
-        print("Test")
 
     async def on_message(self, message):
         if message.guild.id not in self.permit.guilds and message.channel.id not in self.permit.channels and \

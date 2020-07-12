@@ -1,6 +1,7 @@
 import os
 from discord.ext import commands
 from permissions import is_it_me
+from system_commands import measure_temp
 
 
 class System(commands.Cog):
@@ -41,8 +42,11 @@ class System(commands.Cog):
     @commands.command()
     @is_it_me()
     async def update(self, ctx):
-        status = os.popen("git pull --ff-only").read()
-        await ctx.send(status)
+        status = str(os.popen("git pull --ff-only").read())
+        if "Already up to date." in status:
+            await ctx.send(status)
+        else:
+            await ctx.send("Updated.")
 
     @commands.command()
     @is_it_me()
@@ -70,9 +74,9 @@ class System(commands.Cog):
             await ctx.send(f'Removed "{name}" from ignore list. '
                            f'Commands from this user are executed again.')
 
-    @commands.command("ignore-status")
+    @commands.command()
     @is_it_me()
-    async def ignore_status(self, ctx):
+    async def ignored(self, ctx):
         void = "  "
         message = f"```Currently ignored:\n\n" \
                   f"Servers:\n"
@@ -100,6 +104,18 @@ class System(commands.Cog):
         self.bot.change_prefix(prefix, ctx.message.guild.id)
         await ctx.send(f'Changed prefix for server "{self.bot.get_guild(ctx.message.guild.id).name}" to "{prefix}"')
 
+    @commands.command()
+    async def temp(self, ctx):
+        """
+        Displays the cpu temperature.
+        """
+        try:
+            temp = measure_temp()
+        except ValueError:
+            await ctx.send("This command is not available on this system.")
+        else:
+            ctx.send(f'{temp} °C')
+        
 
 def setup(bot):
     bot.add_cog(System(bot))

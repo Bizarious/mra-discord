@@ -21,6 +21,9 @@ class Misc(commands.Cog):
 
     @commands.command()
     async def choose(self, ctx):
+        """
+        Chooses randomly a member of the voice-channel you are in and mentions it.
+        """
         guild = self.bot.get_guild(ctx.message.guild.id)
         vc = guild.voice_channels
         for c in vc:
