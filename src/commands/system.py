@@ -114,7 +114,7 @@ class System(commands.Cog):
         except ValueError:
             await ctx.send("This command is not available on this system.")
         else:
-            ctx.send(f'{temp} °C')
+            await ctx.send(f'{temp} °C')
         
 
 def setup(bot):
