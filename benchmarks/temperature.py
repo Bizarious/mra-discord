@@ -1,7 +1,7 @@
 from multiprocessing import Process, Queue
 from datetime import datetime as dt
 import time
-from system_commands import measure_temp
+import os
 
 
 class Worker(Process):
@@ -29,7 +29,7 @@ class Temp(Process):
             if not self.q.empty():
                 break
             if n == 5:
-                print(measure_temp().read())
+                print(os.popen("/opt/vc/bin/vcgencmd measure_temp").read())
                 n = 0
             time.sleep(1)
 
