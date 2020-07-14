@@ -28,7 +28,7 @@ class Temp(Process):
             n += 1
             if not self.q.empty():
                 break
-            if n == 2:
+            if n == 5:
                 print(measure_temp().read())
                 n = 0
             time.sleep(1)
