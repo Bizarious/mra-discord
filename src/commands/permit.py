@@ -11,17 +11,23 @@ class Permissions(commands.Cog):
     async def ignore(self, ctx, subject, *, name):
         if subject == "guild":
             guild_id = self.bot.get_guild_id(name)
+            if guild_id in self.bot.permit.guilds:
+                raise RuntimeError("Server is already ignored.")
             self.bot.permit.add_ignore("guilds", guild_id)
             await ctx.send(f'Added "{name}" to ignore list. '
                            f'None of the commands from this server will be executed anymore.')
         elif subject == "channel":
             name = name.split("$")
             channel_id = self.bot.get_channel_id(name[0], name[1])
+            if channel_id in self.bot.permit.channels:
+                raise RuntimeError("Channel is already ignored.")
             self.bot.permit.add_ignore("channels", channel_id)
             await ctx.send(f'Added "{name[1]}" in "{name[0]}" to ignore list. '
                            f'None of the commands from this channel will be executed anymore.')
         elif subject == "user":
             user_id = self.bot.get_user_id(name)
+            if user_id in self.bot.permit.users:
+                raise RuntimeError("User is already ignored.")
             self.bot.permit.add_ignore("users", user_id)
             await ctx.send(f'Added "{name}" to ignore list. '
                            f'None of the commands from this user will be executed anymore.')

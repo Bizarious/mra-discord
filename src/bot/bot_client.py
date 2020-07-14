@@ -46,7 +46,7 @@ class BotClient(commands.Bot):
         if isinstance(exception, commands.errors.CheckFailure):
             await ctx.send("No Permissions")
         else:
-            await ctx.send(exception)
+            await ctx.send(exception.__cause__)
 
     # utility functions
     async def get_prefix(self, message):

@@ -24,6 +24,8 @@ class Misc(commands.Cog):
         """
         Chooses randomly a member of the voice-channel you are in and mentions it.
         """
+        if amount > 10000:
+            raise RuntimeError("Number of rolls must not be greater than 10000.")
         guild = self.bot.get_guild(ctx.message.guild.id)
         vc = guild.voice_channels
         for c in vc:
