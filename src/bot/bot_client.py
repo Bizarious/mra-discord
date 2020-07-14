@@ -1,13 +1,19 @@
 import os
 from discord.ext import commands
-from .database import Data
 from permissions import PermissionsDict
+from multiprocessing import Queue
+from containers import TransferPackage
 
 
 class BotClient(commands.Bot):
-    def __init__(self):
+    def __init__(self, data):
+        # Queues
+        self.queue_in: Queue = Queue()
+        self.queue_task: Queue = Queue()
+        self.queues = {"self": self.queue_in, "task": self.queue_task}
+
         self.default_prefix = "."
-        self.data = Data()
+        self.data = data  # database
         self.prefixes = self.data.load_prefixes()
         commands.Bot.__init__(self, command_prefix=self.get_prefix)
         self.cogs_path = "./commands"
@@ -71,5 +77,16 @@ class BotClient(commands.Bot):
             if u.name == name:
                 return u.id
         raise RuntimeError("User not found")
+
+    def return_queue(self, queue):
+        if queue == "bot":
+            return self.queue_in
+        elif queue == "task":
+            return self.queue_task
+
+    def send(self, *, dst, **kwargs):
+        t = TransferPackage(**kwargs)
+        self.queues[dst].put(t)
+
 
 # 'NjQxMzg0OTg5MTk1NTAxNTY4.XcHmhQ.9oqoxjRIn8EZMgZuerimKM_pjog'
