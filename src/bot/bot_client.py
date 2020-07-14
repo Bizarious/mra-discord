@@ -27,9 +27,17 @@ class BotClient(commands.Bot):
         print("online")
 
     async def on_message(self, message):
-        if message.guild.id not in self.permit.guilds and message.channel.id not in self.permit.channels and \
-                message.author.id not in self.permit.users:
+        a_id = message.author.id
+
+        if a_id == 525020069772656660:
             await self.process_commands(message)
+            return
+        if a_id not in self.permit.users:
+            if message.guild is None:
+                await self.process_commands(message)
+            else:
+                if message.guild.id not in self.permit.guilds and message.channel.id not in self.permit.channels:
+                    await self.process_commands(message)
 
     async def on_guild_join(self, guild):
         self.change_prefix(self.default_prefix, guild.id)
@@ -42,6 +50,8 @@ class BotClient(commands.Bot):
 
     # utility functions
     async def get_prefix(self, message):
+        if message.guild is None:
+            return self.default_prefix
         return self.prefixes[str(message.guild.id)]
 
     def check_prefixes(self):
