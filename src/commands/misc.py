@@ -20,7 +20,7 @@ class Misc(commands.Cog):
             await ctx.channel.purge(limit=n)
 
     @commands.command()
-    async def choose(self, ctx):
+    async def choose(self, ctx, amount=0):
         """
         Chooses randomly a member of the voice-channel you are in and mentions it.
         """
@@ -29,9 +29,18 @@ class Misc(commands.Cog):
         for c in vc:
             for m in c.members:
                 if m.id == ctx.message.author.id:
-                    i = random.randint(0, len(c.members)-1)
-                    await ctx.send(c.members[i].mention)
-                    return
+                    if amount == 0:
+                        i = random.randint(0, len(c.members) - 1)
+                        await ctx.send(c.members[i].mention)
+                        return
+                    else:
+                        amount_list = []
+                        for _ in range(amount):
+                            amount_list.append(random.randint(0, len(c.members) - 1))
+                        for i in range(len(c.members)):
+                            await ctx.send(c.members[i].mention + f': {amount_list.count(i)}')
+                        return
+
         await ctx.send("You are not in a voice-channel.")
 
 
