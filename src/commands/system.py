@@ -19,15 +19,6 @@ class System(commands.Cog):
         self.bot.restart = True
         await self.bot.logout()
 
-    @commands.command()
-    @is_it_me()
-    async def update(self, ctx):
-        status = str(os.popen("git pull --ff-only").read())
-        if "Already up to date." in status:
-            await ctx.send(status)
-        else:
-            await ctx.send("Updated.")
-
     @commands.command("prefix")
     @is_it_me()
     async def change_prefix(self, ctx, prefix):
