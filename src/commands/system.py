@@ -1,4 +1,3 @@
-import os
 from discord.ext import commands
 from permissions import is_it_me
 from system_commands import measure_temp

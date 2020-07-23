@@ -34,7 +34,7 @@ class BotClient(commands.Bot):
             return
         if a_id not in self.permit.users:
             if message.guild is None:
-                await self.process_commands(message)
+                return
             else:
                 if message.guild.id not in self.permit.guilds and message.channel.id not in self.permit.channels:
                     await self.process_commands(message)
