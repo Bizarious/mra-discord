@@ -1,5 +1,5 @@
 class TransferPackage:
-    def __init__(self, **kwargs):
+    def __init__(self, *, author, channel, **kwargs):
         self.kwargs = kwargs
         for k in kwargs.keys():
             setattr(self, k, kwargs[k])

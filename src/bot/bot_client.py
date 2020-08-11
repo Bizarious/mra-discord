@@ -94,8 +94,8 @@ class BotClient(commands.Bot):
         elif queue == "task":
             return self.queue_task
 
-    def send(self, *, dst, **kwargs):
-        t = TransferPackage(**kwargs)
+    def send(self, *, dst, author, channel, **kwargs):
+        t = TransferPackage(author=author, channel=channel, **kwargs)
         self.queues[dst].put(t)
 
 

@@ -1,10 +1,7 @@
 import importlib
 import os
-from multiprocessing import Queue
-from queue import PriorityQueue
-from datetime import datetime as dt
-from itertools import count
-from ..containers import TransferPackage, TaskContainer
+from multiprocessing import Queue, Process
+from containers import TaskContainer
 import time
 
 
@@ -14,17 +11,18 @@ def task(name):
     return decorator
 
 
-class TaskManager:
+class TaskManager(Process):
 
     def __init__(self, q_in, q_out, tasks):
+        Process.__init__(self)
         # Queues
         self.queue_in: Queue = q_in
         self.queue_out: Queue = q_out
 
         self.tasks_path = "./tasks"
         self.import_tasks_path = "tasks"
-        self.tasks = PriorityQueue()
-        self.task_dict = tasks
+        self.tasks = {}
+        self.task_dict = {}
 
     def register_task(self, module_path, file):
         task_module = importlib.import_module(f'{module_path}.{file}')
@@ -47,6 +45,17 @@ class TaskManager:
             if file.endswith(".py") and not file.startswith("__"):
                 self.register_task(self.import_tasks_path, file[:-3])
 
-    def add_task(self, *, name, **kwargs):
-        # TODO: Task adding
-        self.tasks.put(self.task_dict[name](**kwargs))
+    def add_task(self, pkt):
+        if str(pkt.author) not in self.tasks.keys():
+            self.tasks[str(pkt.author)] = []
+        self.tasks[str(pkt.author)].append(self.task_dict[pkt.task](**pkt.kwargs))
+
+    def run(self):
+        while True:
+            if not self.queue_in.empty():
+                m = self.queue_in.get()
+                print(m)
+                if m == "Stop":
+                    break
+            time.sleep(0.2)
+
