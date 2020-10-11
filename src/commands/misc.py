@@ -1,5 +1,6 @@
 from discord.ext import commands
 import random
+from version import __version__
 
 
 class Misc(commands.Cog):
@@ -18,6 +19,10 @@ class Misc(commands.Cog):
                     await m.delete()
         elif mode == "all":
             await ctx.channel.purge(limit=n)
+
+    @commands.command()
+    async def version(self, ctx):
+        await ctx.send(__version__)
 
     @commands.command()
     async def choose(self, ctx, amount=0):
