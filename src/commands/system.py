@@ -1,3 +1,4 @@
+import discord
 from discord.ext import commands
 from permissions import is_it_me
 from system_commands import measure_temp
@@ -10,12 +11,14 @@ class System(commands.Cog):
     @commands.command()
     @is_it_me()
     async def shutdown(self, _):
+        await self.bot.change_presence(status=discord.Status.offline)
         await self.bot.logout()
 
     @commands.command()
     @is_it_me()
     async def restart(self, _):
         self.bot.restart = True
+        await self.bot.change_presence(status=discord.Status.offline)
         await self.bot.logout()
 
     @commands.command("prefix")

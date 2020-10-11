@@ -1,4 +1,5 @@
 import os
+import discord
 from discord.ext import commands
 from permissions import PermissionsDict
 from multiprocessing import Queue
@@ -14,22 +15,25 @@ class BotClient(commands.Bot):
 
         self.default_prefix = "."
         self.data = data  # database
-        self.prefixes = self.data.load_prefixes()
+        self.prefixes = self.data.load("prefixes")
         commands.Bot.__init__(self, command_prefix=self.get_prefix)
         self.cogs_path = "./commands"
         self.register_cogs()
         self.restart = False
         self.permit = PermissionsDict(self.data)
 
+        self.bot_owner = self.permit.bot_owner
+
     # Events
     async def on_ready(self):
         self.check_prefixes()
+        await self.change_presence(status=discord.Status.online)
         print("online")
 
     async def on_message(self, message):
         a_id = message.author.id
 
-        if a_id == 525020069772656660:
+        if a_id == self.bot_owner:
             await self.process_commands(message)
             return
         if a_id not in self.permit.users:
@@ -58,11 +62,11 @@ class BotClient(commands.Bot):
         for g in self.guilds:
             if str(g.id) not in self.prefixes:
                 self.prefixes[str(g.id)] = self.default_prefix
-        self.data.save_prefixes(self.prefixes)
+        self.data.save(self.prefixes, "prefixes")
 
     def change_prefix(self, prefix, guild_id):
         self.prefixes[str(guild_id)] = prefix
-        self.data.save_prefixes(self.prefixes)
+        self.data.save(self.prefixes, "prefixes")
 
     def register_cogs(self):
         for filename in os.listdir(self.cogs_path):
@@ -97,6 +101,3 @@ class BotClient(commands.Bot):
     def send(self, *, dst, author, channel, **kwargs):
         t = TransferPackage(author=author, channel=channel, **kwargs)
         self.queues[dst].put(t)
-
-
-# 'NjQxMzg0OTg5MTk1NTAxNTY4.XcHmhQ.9oqoxjRIn8EZMgZuerimKM_pjog'

@@ -1,11 +1,17 @@
 from discord.ext import commands
+from bot.database import Data
+import json
 
 
 class PermissionsDict:
 
     def __init__(self, data):
         self.data = data
-        self.permissions = self.data.load_permissions()
+        self.permissions = self.data.load("permissions")
+
+    @property
+    def bot_owner(self):
+        return self.permissions["bot_owner"]
 
     @property
     def users(self):
@@ -25,14 +31,15 @@ class PermissionsDict:
 
     def add_ignore(self, subject, subject_id):
         self.permissions[subject].append(subject_id)
-        self.data.save_permissions(self.permissions)
+        self.data.save(self.permissions, "permissions")
 
     def remove_ignore(self, subject, subject_id):
         self.permissions[subject].remove(subject_id)
-        self.data.save_permissions(self.permissions)
+        self.data.save(self.permissions, "permissions")
 
 
 def is_it_me():
     def decorator(ctx):
-        return ctx.message.author.id == 525020069772656660
+        f = open(f"{Data.path_data}/permissions.json")
+        return ctx.message.author.id == json.load(f)["bot_owner"]
     return commands.check(decorator)

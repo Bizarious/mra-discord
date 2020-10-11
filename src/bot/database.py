@@ -3,47 +3,55 @@ import json
 
 
 class Data:
+    path_data = "./data"
+    path_config = "./data/config"
 
     def __init__(self):
-        self.path = "./data"
-        self.permissions_path = f'{self.path}/permissions.json'
-        self.prefixes_path = f'{self.path}/prefixes.json'
+        self.files_data = {"permissions": f"{self.path_data}/permissions.json",
+                           "prefixes": f"{self.path_data}/prefixes.json"}
+        self.files_config = {"tokens": f"{self.path_config}/tokens.json"}
+
         self.first_startup()
 
     def first_startup(self):
-        if not os.path.exists(self.path):
-            os.mkdir(self.path)
+        if not os.path.exists(self.path_data):
+            os.mkdir(self.path_data)
             print("created data directory")
-        # permissions
-        if not os.path.exists(self.permissions_path):
-            file = open(self.permissions_path, "w")
-            json.dump({"users": [], "guilds": [], "channels": [], "blacklist": []}, file)
-            file.close()
-            print("created permissions file")
-        if not os.path.exists(self.prefixes_path):
-            file = open(self.prefixes_path, "w")
-            json.dump({}, file)
-            file.close()
-            print("created prefixes file")
 
-    def load_permissions(self):
-        file = open(self.permissions_path)
-        print("loaded permissions")
-        return json.load(file)
+        for k in self.files_data.keys():
+            if not os.path.exists(self.files_data[k]):
+                file = open(self.files_data[k], "w")
+                json.dump({}, file)
+                print(f"created {k}")
 
-    def save_permissions(self, permit):
-        file = open(self.permissions_path, "w")
-        json.dump(permit, file)
-        file.close()
-        print("saved permissions")
+        if not os.path.exists(self.path_config):
+            os.mkdir(self.path_config)
+            print("created data directory")
 
-    def load_prefixes(self):
-        file = open(self.prefixes_path)
-        print("loaded prefixes")
-        return json.load(file)
+        for k in self.files_config.keys():
+            if not os.path.exists(self.files_config[k]):
+                file = open(self.files_config[k], "w")
+                json.dump({}, file)
+                print(f"created {k}")
 
-    def save_prefixes(self, prefix):
-        file = open(self.prefixes_path, "w")
-        json.dump(prefix, file)
-        file.close()
-        print("saved prefixes")
+    def load(self, file):
+        if file in self.files_data.keys():
+            f = open(self.files_data[file])
+            print(f"loaded {file}")
+            return json.load(f)
+        elif file in self.files_config.keys():
+            f = open(self.files_config[file])
+            print(f"loaded {file}")
+            return json.load(f)
+
+    def save(self, data, file):
+        if file in self.files_data.keys():
+            f = open(self.files_data[file], "w")
+            json.dump(data, f)
+            f.close()
+            print(f"saved {file}")
+        elif file in self.files_config.keys():
+            f = open(self.files_config[file], "w")
+            json.dump(data, f)
+            f.close()
+            print(f"saved {file}")
