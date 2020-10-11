@@ -1,4 +1,5 @@
 import discord
+import os
 from discord.ext import commands
 from permissions import is_it_me
 from system_commands import measure_temp
@@ -20,6 +21,15 @@ class System(commands.Cog):
         self.bot.restart = True
         await self.bot.change_presence(status=discord.Status.offline)
         await self.bot.logout()
+
+    @commands.command()
+    @is_it_me()
+    async def update(self, ctx):
+        m = os.popen("git pull").read()
+        if "Already up to date" in m:
+            await ctx.send("Already up to date.")
+        else:
+            await ctx.send("Updated")
 
     @commands.command("prefix")
     @is_it_me()
