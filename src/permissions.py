@@ -30,6 +30,8 @@ class PermissionsDict:
         return self.permissions["blacklist"]
 
     def add_ignore(self, subject, subject_id):
+        if subject not in self.permissions.keys():
+            self.permissions[subject] = []
         self.permissions[subject].append(subject_id)
         self.data.save(self.permissions, "permissions")
 
