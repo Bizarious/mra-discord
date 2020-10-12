@@ -1,5 +1,5 @@
 from discord.ext import commands
-from permissions import is_it_me
+from permissions import owner
 
 
 class Permissions(commands.Cog):
@@ -7,7 +7,7 @@ class Permissions(commands.Cog):
         self.bot = bot
 
     @commands.command()
-    @is_it_me()
+    @owner()
     async def ignore(self, ctx, subject, *, name):
         if subject == "guild":
             guild_id = self.bot.get_guild_id(name)
@@ -33,7 +33,7 @@ class Permissions(commands.Cog):
                            f'None of the commands from this user will be executed anymore.')
 
     @commands.command()
-    @is_it_me()
+    @owner()
     async def attention(self, ctx, subject, *, name):
         if subject == "guild":
             guild_id = self.bot.get_guild_id(name)
@@ -59,7 +59,7 @@ class Permissions(commands.Cog):
                            f'Commands from this user are executed again.')
 
     @commands.command()
-    @is_it_me()
+    @owner()
     async def ignored(self, ctx):
         void = "  "
         message = f"```Currently ignored:\n\n" \

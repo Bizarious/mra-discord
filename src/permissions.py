@@ -40,8 +40,7 @@ class PermissionsDict:
         self.data.save(self.permissions, "permissions")
 
 
-def is_it_me():
+def owner():
     def decorator(ctx):
-        f = open(f"{Data.path_data}/permissions.json")
-        return ctx.message.author.id == json.load(f)["bot_owner"]
+        return ctx.message.author.id == ctx.bot.permit.bot_owner
     return commands.check(decorator)

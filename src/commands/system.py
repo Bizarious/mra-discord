@@ -1,7 +1,7 @@
 import discord
 import os
 from discord.ext import commands
-from permissions import is_it_me
+from permissions import owner
 from system_commands import measure_temp
 
 
@@ -10,20 +10,20 @@ class System(commands.Cog):
         self.bot = bot
 
     @commands.command()
-    @is_it_me()
+    @owner()
     async def shutdown(self, _):
         await self.bot.change_presence(status=discord.Status.offline)
         await self.bot.logout()
 
     @commands.command()
-    @is_it_me()
+    @owner()
     async def restart(self, _):
         self.bot.restart = True
         await self.bot.change_presence(status=discord.Status.offline)
         await self.bot.logout()
 
     @commands.command()
-    @is_it_me()
+    @owner()
     async def update(self, ctx):
         m = os.popen("git pull").read()
         if "Already up to date" in m:
@@ -32,12 +32,13 @@ class System(commands.Cog):
             await ctx.send("Updated")
 
     @commands.command("prefix")
-    @is_it_me()
+    @owner()
     async def change_prefix(self, ctx, prefix):
         self.bot.change_prefix(prefix, ctx.message.guild.id)
         await ctx.send(f'Changed prefix for server "{self.bot.get_guild(ctx.message.guild.id).name}" to "{prefix}"')
 
     @commands.command()
+    @owner()
     async def temp(self, ctx):
         """
         Displays the cpu temperature.
