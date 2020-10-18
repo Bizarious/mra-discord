@@ -1,16 +1,29 @@
 from croniter import croniter as cr
-from datetime import datetime as dt
+from datetime import datetime as dt, timedelta as td
 from abc import ABC, abstractmethod
 
 
 class Task(ABC):
     date_format = "%d.%m.%y %H:%M"
 
-    def __init__(self, *, creation_time=None):
+    def __init__(self, *, author_id, channel_id=None, server_id=None, creation_time=None):
+
+        self.author_id = author_id
+        self.channel_id = channel_id
+        self.server_id = server_id
+
         if creation_time is None:
-            self.creation_time = dt.now().replace(microsecond=0)
+            self._creation_time = dt.now()
         else:
-            self.creation_time = dt.strptime(creation_time, self.date_format)
+            self._creation_time = dt.strptime(creation_time, self.date_format)
+
+    @property
+    def creation_time(self):
+        return self._creation_time
+
+    @property
+    def creation_time_string(self):
+        return self._creation_time.strftime(self.date_format)
 
     @abstractmethod
     def run(self):
@@ -19,25 +32,47 @@ class Task(ABC):
 
 class TimeBasedTask(Task, ABC):
 
-    def __init__(self, *, minutes="*", hours="*", days="*", months="*", weekdays="*", creation_time=None):
-        Task.__init__(self, creation_time=creation_time)
-        self.minutes = minutes
-        self.hours = hours
-        self.days = days
-        self.months = months
-        self.weekdays = weekdays
+    def __init__(self, *, date_string="* * * * *", author_id, channel_id=None, server_id=None, creation_time=None):
+        Task.__init__(self, author_id=author_id, channel_id=channel_id, server_id=server_id,
+                      creation_time=creation_time)
 
+        self.time = []
+        self.date_string = date_string
+        if " " not in date_string:
+            buffer = ""
+            for c in date_string:
+                buffer += c
+                if c in ["h", "m", "s"]:
+                    self.time.append(buffer)
+                    buffer = ""
         self.delete = False
 
     def get_next_date(self):
-        dates = cr(f"{self.minutes} {self.hours} {self.days} {self.months} {self.weekdays}", dt.now())
-        return dates.get_next(dt)
+        if len(self.time) == 0:
+            dates = cr(self.date_string, dt.now())
+            return dates.get_next(dt)
+        else:
+            hours = 0
+            minutes = 0
+            seconds = 0
+            for time in self.time:
+                if "h" in time:
+                    hours = int(time[:-1])
+                if "m" in time:
+                    minutes = int(time[:-1])
+                if "s" in time:
+                    seconds = int(time[:-1])
+            delta = td(hours=hours, minutes=minutes, seconds=seconds)
+            return dt.now().replace(microsecond=0) + delta
+
+    def to_json(self):
+        return {"date_string": self.date_string, "creation_time": self._creation_time, "author_id": self.author_id,
+                "channel_id": self.channel_id, "server_id": self.server_id}
 
     def run(self):
         pass
 
 
 if __name__ == "__main__":
-    t = TimeBasedTask(minutes="*/5", hours="12", days="15", creation_time="19.12.45 14:08")
+    t = TimeBasedTask(author_id=1)
     print(t.get_next_date())
-    print(t.creation_time)

@@ -50,7 +50,7 @@ class BotClient(commands.Bot):
         if isinstance(exception, commands.errors.CheckFailure):
             await ctx.send("No Permissions")
         else:
-            await ctx.send(exception.__cause__)
+            await ctx.send(exception)
 
     # utility functions
     async def get_prefix(self, message):
@@ -99,5 +99,5 @@ class BotClient(commands.Bot):
             return self.queue_task
 
     def send(self, *, dst, author, channel, **kwargs):
-        t = TransferPackage(author=author, channel=channel, **kwargs)
+        t = TransferPackage(author_id=author, channel_id=channel, **kwargs)
         self.queues[dst].put(t)

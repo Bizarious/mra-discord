@@ -1,6 +1,18 @@
-from discord.ext import commands
+def dec(fct):
+    fct()
 
-client = commands.Bot(command_prefix=".")
 
-client.run('NjQxMzg0OTg5MTk1NTAxNTY4.XcHmhQ.9oqoxjRIn8EZMgZuerimKM_pjog')
+@dec
+def hello():    # dec(hello)
+    print("Hello World")
 
+
+def dec2(x):
+    def sub_dec(fct):
+        fct(x)
+    return sub_dec
+
+
+@dec2("Moin")
+def hello2(x):  # dec2("Moin")(hello2) -> sub_dec(hello)
+    print(x)

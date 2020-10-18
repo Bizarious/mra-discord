@@ -49,6 +49,10 @@ class System(commands.Cog):
             await ctx.send("This command is not available on this system.")
         else:
             await ctx.send(f'{temp} °C')
+
+    @commands.command()
+    async def test(self, ctx, arg):
+        print(arg)
         
 
 def setup(bot):
