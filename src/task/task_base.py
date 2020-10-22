@@ -69,6 +69,7 @@ class TimeBasedTask(Task, ABC):
         return {"date_string": self.date_string, "creation_time": self._creation_time, "author_id": self.author_id,
                 "channel_id": self.channel_id, "server_id": self.server_id}
 
+    @abstractmethod
     def run(self):
         pass
 
