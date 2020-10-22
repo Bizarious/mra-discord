@@ -1,7 +1,8 @@
 import sys
 from bot.bot_client import BotClient
-from system_commands import restart
+from system.system_commands import restart
 from bot.database import Data
+from system.ipc import IPC
 from task.task_control import TaskManager
 
 
@@ -11,12 +12,17 @@ class Main:
         self.data = Data()
         self.bot_token = ""
         self.greetings()
-        self.bot = BotClient(self.data)
-        # self.task_manager = TaskManager(self.bot.queue_task, self.bot.queue_in, "a")
+
+        self.ipc = IPC()
+        self.ipc.create_queues("bot", "task")
+
+        self.bot = BotClient(self.data, self.ipc)
+        self.task_manager = TaskManager(self.ipc, {})
 
     def run(self):
-        # self.task_manager.start()
+        self.task_manager.start()
         self.bot.run(self.bot_token)
+        self.ipc.put_manually("task", "stop")
 
         if self.bot.restart:
             restart(sys.argv)

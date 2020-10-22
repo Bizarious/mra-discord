@@ -6,8 +6,10 @@ class Tasks(commands.Cog):
         self.bot = bot
 
     @commands.command()
-    async def task(self, ctx):
-        self.bot.send(dst="task", task="Reminder", author=ctx.message.author.id, channel=ctx.message.channel.id)
+    async def task(self, ctx, date_string, *, message):
+        self.bot.ipc.send(dst="task", cmd="task", task="Reminder", author=ctx.message.author.id,
+                          channel=ctx.message.channel.id,
+                          message=message, date_string=date_string)
 
 
 def setup(bot):

@@ -2,7 +2,7 @@ import discord
 import os
 from discord.ext import commands
 from permissions import owner
-from system_commands import measure_temp
+from system.system_commands import measure_temp
 
 
 class System(commands.Cog):

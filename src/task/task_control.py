@@ -3,9 +3,10 @@ import os
 import task.task_base as tk
 from datetime import datetime as dt, timedelta as td
 from queue import PriorityQueue
-from multiprocessing import Queue, Process
+from multiprocessing import Process
 from threading import Thread, Lock
 from containers import TaskContainer, TransferPackage
+from system.ipc import IPC
 import time
 
 
@@ -16,37 +17,37 @@ def task(name):
 
 
 class TaskExecutor(Thread):
-    def __init__(self, tsk: tk.TimeBasedTask, q_out: Queue):
+    def __init__(self, tsk: tk.TimeBasedTask, ipc: IPC):
         Thread.__init__(self)
         self.task = tsk
-        self.q_out = q_out
-        self.lock = Lock
+        self.ipc = ipc
 
     def run(self):
         message = self.task.run()
         if message is not None:
-            self.q_out.put(message)
+            self.ipc.send(dst="bot", author=self.task.author_id, channel=self.task.channel_id, cmd="send",
+                          message=message)
         if self.task.delete:
             del self.task
 
 
 class TaskManager(Process):
 
-    def __init__(self, q_in, q_out, tasks: dict):
+    def __init__(self, ipc: IPC, tasks: dict):
         Process.__init__(self)
         # Queues
-        self.queue_in: Queue = q_in
-        self.queue_out: Queue = q_out
         self.task_queue = PriorityQueue()
-        self.lock = Lock()
+        self.ipc = ipc
 
-        self.tasks_path = "../tasks"
+        self.tasks_path = "./tasks"
         self.import_tasks_path = "tasks"
 
         self.tasks = {}     # author mapping
         self.task_dict = {}     # task classes
 
         self.next_date = None
+
+        self.register_all_tasks()
 
     def register_task(self, module_path: str, file: str):
         task_module = importlib.import_module(f'{module_path}.{file}')
@@ -72,9 +73,11 @@ class TaskManager(Process):
     def add_task(self, pkt: TransferPackage):
         if str(pkt.author_id) not in self.tasks.keys():
             self.tasks[pkt.author_id] = []     # author id in task list
-        tsk: tk.TimeBasedTask = self.task_dict[pkt.task](**pkt.kwargs)  # task creation
+        tsk: tk.TimeBasedTask = self.task_dict[pkt.task](author_id=pkt.author_id, channel_id=pkt.channel_id,
+                                                         **pkt.kwargs)  # task creation
         self.tasks[pkt.author_id].append(tsk)  # task is appended to author list
         self.task_queue.put((tsk.creation_time, tsk.get_next_date(), tsk))    # task is added to queue
+        print(self.task_queue.queue)
 
     def delete_task_from_mapping(self, tsk: tk.TimeBasedTask):
         author_id = tsk.author_id
@@ -110,26 +113,28 @@ class TaskManager(Process):
             else:
                 self.delete_task_from_mapping(tsk)
             self.set_next_date()
-            executor = TaskExecutor(tsk, self.queue_out)
+            executor = TaskExecutor(tsk, self.ipc)
             executor.start()
 
     def run(self):
         while True:
-            """""
-            if not self.queue_in.empty():
-                m = self.queue_in.get()
-                print(m)
-                if m == "Stop":
+            pkt = self.ipc.check_queue("task")
+            if pkt is not None:
+                if pkt == "stop":
                     break
-            """""
+                else:
+                    if pkt.cmd == "task":
+                        self.add_task(pkt)
+                        self.set_next_date()
             self.tasks_loop()
             time.sleep(0.2)
 
 
 if __name__ == "__main__":
-    t = TaskManager("a", "b", {})
-    t.register_all_tasks()
-    tr = TransferPackage(author_id=1, task="EinTestTask", date_string="1s")
+    i = IPC()
+    i.create_queues("task")
+    t = TaskManager(i, {})
+    tr = TransferPackage(author_id=1, task="Reminder", date_string="1s", message="Moin")
     t.add_task(tr)
     t.set_next_date()
     t.run()

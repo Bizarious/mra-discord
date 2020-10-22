@@ -32,7 +32,7 @@ class Task(ABC):
 
 class TimeBasedTask(Task, ABC):
 
-    def __init__(self, *, date_string="* * * * *", author_id, channel_id=None, server_id=None, creation_time=None):
+    def __init__(self, *, author_id, channel_id=None, server_id=None, date_string="* * * * *", creation_time=None):
         Task.__init__(self, author_id=author_id, channel_id=channel_id, server_id=server_id,
                       creation_time=creation_time)
 

@@ -1,18 +1,14 @@
 import os
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 from permissions import PermissionsDict
-from multiprocessing import Queue
-from containers import TransferPackage
+from system.ipc import IPC
 
 
 class BotClient(commands.Bot):
-    def __init__(self, data):
-        # Queues
-        self.queue_in: Queue = Queue()
-        self.queue_task: Queue = Queue()
-        self.queues = {"self": self.queue_in, "task": self.queue_task}
+    def __init__(self, data, ipc: IPC):
 
+        self.ipc = ipc
         self.default_prefix = "."
         self.data = data  # database
         self.prefixes = self.data.load("prefixes")
@@ -24,10 +20,19 @@ class BotClient(commands.Bot):
 
         self.bot_owner = self.permit.bot_owner
 
+    # Loop
+    @tasks.loop(seconds=0.2)
+    async def background_loop(self):
+        pkt = self.ipc.check_queue("bot")
+        if pkt is not None:
+            if pkt.cmd == "send":
+                await self.get_channel(pkt.channel_id).send(pkt.message)
+
     # Events
     async def on_ready(self):
         self.check_prefixes()
         await self.change_presence(status=discord.Status.online)
+        self.background_loop.start()
         print("online")
 
     async def on_message(self, message):
@@ -91,13 +96,3 @@ class BotClient(commands.Bot):
             if u.name == name:
                 return u.id
         raise RuntimeError("User not found")
-
-    def return_queue(self, queue):
-        if queue == "bot":
-            return self.queue_in
-        elif queue == "task":
-            return self.queue_task
-
-    def send(self, *, dst, author, channel, **kwargs):
-        t = TransferPackage(author_id=author, channel_id=channel, **kwargs)
-        self.queues[dst].put(t)
