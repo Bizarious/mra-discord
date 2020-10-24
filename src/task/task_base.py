@@ -45,6 +45,8 @@ class TimeBasedTask(Task, ABC):
                 if c in ["h", "m", "s"]:
                     self.time.append(buffer)
                     buffer = ""
+
+        # flags
         self.delete = False
 
     def get_next_date(self):
@@ -52,6 +54,7 @@ class TimeBasedTask(Task, ABC):
             dates = cr(self.date_string, dt.now())
             return dates.get_next(dt)
         else:
+            self.delete = True
             hours = 0
             minutes = 0
             seconds = 0

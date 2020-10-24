@@ -24,9 +24,17 @@ class BotClient(commands.Bot):
     @tasks.loop(seconds=0.2)
     async def background_loop(self):
         pkt = self.ipc.check_queue("bot")
+        await self.parse_commands(pkt)
+
+    async def parse_commands(self, pkt):
         if pkt is not None:
-            if pkt.cmd == "send":
-                await self.get_channel(pkt.channel_id).send(pkt.message)
+            if pkt.cmd == "shutdown":
+                await self.shutdown()
+            elif pkt.cmd == "send":
+                if pkt.channel_id is not None:
+                    await self.get_channel(pkt.channel_id).send(pkt.message)
+                else:
+                    await self.get_user(pkt.author_id).send(pkt.message)
 
     # Events
     async def on_ready(self):
@@ -58,6 +66,10 @@ class BotClient(commands.Bot):
             await ctx.send(exception)
 
     # utility functions
+    async def shutdown(self):
+        await self.change_presence(status=discord.Status.offline)
+        await self.logout()
+
     async def get_prefix(self, message):
         if message.guild is None:
             return self.default_prefix

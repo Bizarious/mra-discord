@@ -10,12 +10,15 @@ class IPC:
         for e in entities:
             self.queues[e] = Queue()
 
-    def send(self, *, dst, author, channel, **kwargs):
-        t = TransferPackage(author_id=author, channel_id=channel, **kwargs)
-        self.queues[dst].put(t)
+    @staticmethod
+    def pack(**kwargs):
+        t = TransferPackage()
+        t.pack(**kwargs)
+        return t
 
-    def put_manually(self, entity, content):
-        self.queues[entity].put(content)
+    def send(self, *, dst, package, **kwargs):
+        package.label(**kwargs)
+        self.queues[dst].put(package)
 
     def check_queue(self, entity):
         queue: Queue = self.queues[entity]

@@ -22,7 +22,9 @@ class Main:
     def run(self):
         self.task_manager.start()
         self.bot.run(self.bot_token)
-        self.ipc.put_manually("task", "stop")
+
+        t = self.ipc.pack()
+        self.ipc.send(dst="task", package=t, cmd="stop")
 
         if self.bot.restart:
             restart(sys.argv)

@@ -3,6 +3,7 @@ import os
 from discord.ext import commands
 from permissions import owner
 from system.system_commands import measure_temp
+from containers import TransferPackage
 
 
 class System(commands.Cog):
@@ -11,9 +12,12 @@ class System(commands.Cog):
 
     @commands.command()
     @owner()
-    async def shutdown(self, _):
-        await self.bot.change_presence(status=discord.Status.offline)
-        await self.bot.logout()
+    async def shutdown(self, _, date_string=None):
+        if date_string is None:
+            await self.bot.shutdown()
+        else:
+            t = self.bot.ipc.pack(author_id=0, date_string=date_string)
+            self.bot.ipc.send(dst="task", package=t, cmd="task", task="Shutdown", author_id=0)
 
     @commands.command()
     @owner()
