@@ -97,7 +97,6 @@ class TaskManager(Process):
         self.task_queue.put((tsk.get_next_date(), tsk.creation_time, tsk))  # task is added to queue
 
     def add_task_from_dict(self, tsk_dict: dict):
-        print(dt.now() > dt.strptime(tsk_dict["extra"]["next_time"], Dates.DATE_FORMAT.value))
         if dt.now() > dt.strptime(tsk_dict["extra"]["next_time"], Dates.DATE_FORMAT.value) and \
                 tsk_dict["extra"]["delete"]:
             return
