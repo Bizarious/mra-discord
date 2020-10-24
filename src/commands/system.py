@@ -18,14 +18,14 @@ class System(commands.Cog):
             t = self.bot.ipc.pack(author_id=0, date_string=date_string)
             self.bot.ipc.send(dst="task", package=t, cmd="task", task="Shutdown", author_id=0)
 
-    @commands.command()
+    @commands.command(hidden=True)
     @owner()
     async def restart(self, _):
         self.bot.restart = True
         await self.bot.change_presence(status=discord.Status.offline)
         await self.bot.logout()
 
-    @commands.command()
+    @commands.command(hidden=True)
     @owner()
     async def update(self, ctx):
         m = os.popen("git pull").read()
@@ -34,13 +34,13 @@ class System(commands.Cog):
         else:
             await ctx.send("Updated")
 
-    @commands.command("prefix")
+    @commands.command("prefix", hidden=True)
     @owner()
     async def change_prefix(self, ctx, prefix):
         self.bot.change_prefix(prefix, ctx.message.guild.id)
         await ctx.send(f'Changed prefix for server "{self.bot.get_guild(ctx.message.guild.id).name}" to "{prefix}"')
 
-    @commands.command()
+    @commands.command(hidden=True)
     @owner()
     async def temp(self, ctx):
         """
@@ -52,10 +52,6 @@ class System(commands.Cog):
             await ctx.send("This command is not available on this system.")
         else:
             await ctx.send(f'{temp} °C')
-
-    @commands.command()
-    async def test(self, ctx, arg):
-        print(arg)
         
 
 def setup(bot):

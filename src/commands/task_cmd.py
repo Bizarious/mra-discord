@@ -1,5 +1,6 @@
 from discord.ext import commands
 from tabulate import tabulate as tab
+from permissions import owner_check
 
 
 class Tasks(commands.Cog):
@@ -18,12 +19,19 @@ class Tasks(commands.Cog):
                           author_id=ctx.message.author.id)
 
     @commands.command()
-    async def gt(self, ctx):
+    async def gt(self, ctx, system=None):
+        if system is not None:
+            if not owner_check(ctx):
+                raise commands.errors.CheckFailure()
+            else:
+                author_id = 0
+        else:
+            author_id = ctx.author.id
         t = self.bot.ipc.pack()
         pipe = self.bot.ipc.send(dst="task",
                                  create_pipe=True,
                                  package=t, cmd="get_tasks",
-                                 author_id=ctx.author.id)
+                                 author_id=author_id)
         tasks: list = pipe.recv()
         if tasks is None:
             await ctx.send("You have no active tasks")
@@ -38,13 +46,20 @@ class Tasks(commands.Cog):
         await ctx.send(f"```{tab(table, headers=headers)}```")
 
     @commands.command("dt")
-    async def delete_task(self, ctx, task_id):
+    async def delete_task(self, ctx, task_id, system=None):
+        if system is not None:
+            if not owner_check(ctx):
+                raise commands.errors.CheckFailure()
+            else:
+                author_id = 0
+        else:
+            author_id = ctx.author.id
         t = self.bot.ipc.pack()
         pipe = self.bot.ipc.send(dst="task",
                                  create_pipe=True,
                                  package=t,
                                  cmd="del_task",
-                                 author_id=ctx.author.id,
+                                 author_id=author_id,
                                  task_id=task_id)
         answer = pipe.recv()
         if answer is not None:

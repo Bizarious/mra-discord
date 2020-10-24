@@ -38,6 +38,10 @@ class PermissionsDict:
         self.data.save(self.permissions, "permissions")
 
 
+def owner_check(ctx):
+    return ctx.message.author.id == ctx.bot.permit.bot_owner
+
+
 def owner():
     def decorator(ctx):
         return ctx.message.author.id == ctx.bot.permit.bot_owner
