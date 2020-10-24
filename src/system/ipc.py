@@ -1,5 +1,6 @@
 from multiprocessing import Queue
 from containers import TransferPackage
+from multiprocessing import Pipe
 
 
 class IPC:
@@ -16,9 +17,14 @@ class IPC:
         t.pack(**kwargs)
         return t
 
-    def send(self, *, dst, package, **kwargs):
-        package.label(**kwargs)
+    def send(self, *, dst, create_pipe=False, package, **kwargs):
+        if create_pipe:
+            pipe1, pipe2 = Pipe()
+        else:
+            pipe1, pipe2 = None, None
+        package.label(pipe=pipe2, **kwargs)
         self.queues[dst].put(package)
+        return pipe1
 
     def check_queue(self, entity):
         queue: Queue = self.queues[entity]

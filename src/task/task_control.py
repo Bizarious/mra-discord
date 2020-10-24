@@ -74,7 +74,7 @@ class TaskManager(Process):
                 self.register_task(self.import_tasks_path, file[:-3])
 
     def add_task(self, pkt):
-        if str(pkt.author_id) not in self.tasks.keys():
+        if pkt.author_id not in self.tasks.keys():
             self.tasks[pkt.author_id] = []  # author id in task list
         tsk: tk.TimeBasedTask = self.task_dict[pkt.task](**pkt.kwargs)  # task creation
         self.tasks[pkt.author_id].append(tsk)  # task is appended to author list
@@ -85,7 +85,33 @@ class TaskManager(Process):
         self.tasks[author_id].remove(tsk)
 
     def delete_task_from_queue(self, tsk: tk.TimeBasedTask):
-        self.task_queue.queue.remove(tsk)
+        for t in self.task_queue.queue:
+            if t[2] == tsk:
+                self.task_queue.queue.remove(t)
+                return
+        raise RuntimeError("Task not in queue")
+
+    def delete_task(self, tsk: tk.TimeBasedTask):
+        self.delete_task_from_mapping(tsk)
+        self.delete_task_from_queue(tsk)
+        del tsk
+
+    def get_task(self, task_id, author_id):
+        if author_id not in self.tasks.keys():
+            raise RuntimeError("You have no active tasks")
+        elif len(self.tasks[author_id]) <= task_id:
+            raise RuntimeError("Task Id noes not exist")
+        return self.tasks[author_id][task_id]
+
+    def get_tasks(self, author_id):
+        if author_id not in self.tasks.keys():
+            return None
+        elif len(self.tasks[author_id]) == 0:
+            return None
+        tasks = []
+        for t in self.tasks[author_id]:
+            tasks.append(t.to_json())
+        return tasks
 
     def set_next_date(self):
         if not self.task_queue.empty():
@@ -124,6 +150,16 @@ class TaskManager(Process):
             elif pkt.cmd == "task":
                 self.add_task(pkt)
                 self.set_next_date()
+            elif pkt.cmd == "get_tasks":
+                tasks = self.get_tasks(pkt.author_id)
+                pkt.pipe.send(tasks)
+            elif pkt.cmd == "del_task":
+                try:
+                    tsk = self.get_task(int(pkt.task_id)-1, pkt.author_id)
+                    self.delete_task(tsk)
+                    pkt.pipe.send(None)
+                except RuntimeError as e:
+                    pkt.pipe.send(e)
         return None
 
     def run(self):

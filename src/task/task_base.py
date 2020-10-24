@@ -26,6 +26,10 @@ class Task(ABC):
         return self._creation_time.strftime(self.date_format)
 
     @abstractmethod
+    def to_json(self):
+        pass
+
+    @abstractmethod
     def run(self):
         pass
 
@@ -46,13 +50,15 @@ class TimeBasedTask(Task, ABC):
                     self.time.append(buffer)
                     buffer = ""
 
+        self._next_time = None
+
         # flags
         self.delete = False
 
     def get_next_date(self):
         if len(self.time) == 0:
             dates = cr(self.date_string, dt.now())
-            return dates.get_next(dt)
+            self._next_time = dates.get_next(dt)
         else:
             self.delete = True
             hours = 0
@@ -66,11 +72,25 @@ class TimeBasedTask(Task, ABC):
                 if "s" in time:
                     seconds = int(time[:-1])
             delta = td(hours=hours, minutes=minutes, seconds=seconds)
-            return dt.now().replace(microsecond=0) + delta
+            self._next_time = dt.now().replace(microsecond=0) + delta
+        return self._next_time
+
+    @property
+    def next_time(self):
+        return self._next_time
+
+    @property
+    def nex_time_string(self):
+        return self._next_time.strftime(self.date_format)
 
     def to_json(self):
-        return {"date_string": self.date_string, "creation_time": self._creation_time, "author_id": self.author_id,
-                "channel_id": self.channel_id, "server_id": self.server_id}
+        return {"date_string": self.date_string,
+                "creation_time": self.creation_time_string,
+                "next_time": self.nex_time_string,
+                "author_id": self.author_id,
+                "channel_id": self.channel_id,
+                "server_id": self.server_id,
+                "type": self.__class__.__name__}
 
     @abstractmethod
     def run(self):
