@@ -3,14 +3,13 @@ import os
 from discord.ext import commands
 from permissions import owner
 from system.system_commands import measure_temp
-from containers import TransferPackage
 
 
 class System(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command()
+    @commands.command(hidden=True)
     @owner()
     async def shutdown(self, _, date_string=None):
         if date_string is None:

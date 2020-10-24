@@ -8,6 +8,7 @@ from threading import Thread
 from containers import TaskContainer
 from system.ipc import IPC
 import time
+from enums import Dates
 
 
 def task(name):
@@ -36,7 +37,7 @@ class TaskExecutor(Thread):
 
 class TaskManager(Process):
 
-    def __init__(self, ipc: IPC, tasks: dict):
+    def __init__(self, data, ipc: IPC):
         Process.__init__(self)
         # Queues
         self.task_queue = PriorityQueue()
@@ -44,6 +45,7 @@ class TaskManager(Process):
 
         self.tasks_path = "./tasks"
         self.import_tasks_path = "tasks"
+        self.data = data
 
         self.tasks = {}  # author mapping
         self.task_dict = {}  # task classes
@@ -51,6 +53,7 @@ class TaskManager(Process):
         self.next_date = None
 
         self.register_all_tasks()
+        self.import_tasks(self.data.load("tasks"))
 
     def register_task(self, module_path: str, file: str):
         task_module = importlib.import_module(f'{module_path}.{file}')
@@ -73,12 +76,41 @@ class TaskManager(Process):
             if file.endswith(".py") and not file.startswith("__"):
                 self.register_task(self.import_tasks_path, file[:-3])
 
+    def import_tasks(self, tasks: list):
+        for t in tasks:
+            self.add_task_from_dict(t)
+        self.set_next_date()
+
+    def export_tasks(self):
+        tasks = []
+        for v in self.tasks.values():
+            for t in v:
+                tasks.append(t.to_json())
+        return tasks
+
     def add_task(self, pkt):
         if pkt.author_id not in self.tasks.keys():
             self.tasks[pkt.author_id] = []  # author id in task list
         tsk: tk.TimeBasedTask = self.task_dict[pkt.task](**pkt.kwargs)  # task creation
+        tsk.name = pkt.task
         self.tasks[pkt.author_id].append(tsk)  # task is appended to author list
         self.task_queue.put((tsk.get_next_date(), tsk.creation_time, tsk))  # task is added to queue
+
+    def add_task_from_dict(self, tsk_dict: dict):
+        print(dt.now() > dt.strptime(tsk_dict["extra"]["next_time"], Dates.DATE_FORMAT.value))
+        if dt.now() > dt.strptime(tsk_dict["extra"]["next_time"], Dates.DATE_FORMAT.value) and \
+                tsk_dict["extra"]["delete"]:
+            return
+        if tsk_dict["basic"]["author_id"] not in self.tasks.keys():
+            self.tasks[tsk_dict["basic"]["author_id"]] = []
+        tsk: tk.TimeBasedTask = self.task_dict[tsk_dict["extra"]["type"]](**tsk_dict["basic"])
+        tsk.from_json(tsk_dict)
+        if " " in tsk_dict["basic"]["date_string"]:
+            next_time = tsk.get_next_date()
+        else:
+            next_time = dt.strptime(tsk_dict["extra"]["next_time"], Dates.DATE_FORMAT.value)
+        self.tasks[tsk_dict["basic"]["author_id"]].append(tsk)
+        self.task_queue.put((next_time, tsk.creation_time, tsk))
 
     def delete_task_from_mapping(self, tsk: tk.TimeBasedTask):
         author_id = tsk.author_id
@@ -146,6 +178,7 @@ class TaskManager(Process):
     def parse_commands(self, pkt):
         if pkt is not None:
             if pkt.cmd == "stop":
+                self.data.save(self.export_tasks(), "tasks")
                 return "stop"
             elif pkt.cmd == "task":
                 self.add_task(pkt)
@@ -155,7 +188,7 @@ class TaskManager(Process):
                 pkt.pipe.send(tasks)
             elif pkt.cmd == "del_task":
                 try:
-                    tsk = self.get_task(int(pkt.task_id)-1, pkt.author_id)
+                    tsk = self.get_task(int(pkt.task_id) - 1, pkt.author_id)
                     self.delete_task(tsk)
                     pkt.pipe.send(None)
                 except RuntimeError as e:

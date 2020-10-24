@@ -31,7 +31,10 @@ class Tasks(commands.Cog):
         headers = ["ID", "Type", "Creation Date", "Next Execution Date"]
         table = []
         for i in range(len(tasks)):
-            table.append([i+1, tasks[i]["type"], tasks[i]["creation_time"], tasks[i]["next_time"]])
+            table.append([i+1,
+                          tasks[i]["extra"]["type"],
+                          tasks[i]["extra"]["creation_time"],
+                          tasks[i]["extra"]["next_time"]])
         await ctx.send(f"```{tab(table, headers=headers)}```")
 
     @commands.command("dt")

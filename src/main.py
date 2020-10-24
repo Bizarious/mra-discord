@@ -1,7 +1,7 @@
 import sys
 from bot.bot_client import BotClient
 from system.system_commands import restart
-from bot.database import Data
+from database.database import Data
 from system.ipc import IPC
 from task.task_control import TaskManager
 
@@ -17,7 +17,7 @@ class Main:
         self.ipc.create_queues("bot", "task")
 
         self.bot = BotClient(self.data, self.ipc)
-        self.task_manager = TaskManager(self.ipc, {})
+        self.task_manager = TaskManager(self.data, self.ipc)
 
     def run(self):
         self.task_manager.start()

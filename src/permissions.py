@@ -1,6 +1,4 @@
 from discord.ext import commands
-from bot.database import Data
-import json
 
 
 class PermissionsDict:

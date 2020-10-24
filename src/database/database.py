@@ -8,7 +8,8 @@ class Data:
 
     def __init__(self):
         self.files_data = {"permissions": f"{self.path_data}/permissions.json",
-                           "prefixes": f"{self.path_data}/prefixes.json"}
+                           "prefixes": f"{self.path_data}/prefixes.json",
+                           "tasks": f"{self.path_data}/tasks.json"}
         self.files_config = {"tokens": f"{self.path_config}/tokens.json"}
 
         self.first_startup()

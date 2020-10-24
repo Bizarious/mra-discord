@@ -1,21 +1,17 @@
 from croniter import croniter as cr
 from datetime import datetime as dt, timedelta as td
 from abc import ABC, abstractmethod
+from enums import Dates
 
 
 class Task(ABC):
-    date_format = "%d.%m.%y %H:%M"
 
-    def __init__(self, *, author_id, channel_id=None, server_id=None, creation_time=None):
-
+    def __init__(self, *, author_id, channel_id=None, server_id=None):
         self.author_id = author_id
         self.channel_id = channel_id
         self.server_id = server_id
-
-        if creation_time is None:
-            self._creation_time = dt.now()
-        else:
-            self._creation_time = dt.strptime(creation_time, self.date_format)
+        self._creation_time = dt.now()
+        self._name = None
 
     @property
     def creation_time(self):
@@ -23,11 +19,23 @@ class Task(ABC):
 
     @property
     def creation_time_string(self):
-        return self._creation_time.strftime(self.date_format)
+        return self._creation_time.strftime(Dates.DATE_FORMAT.value)
+
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, name):
+        self._name = name
 
     @abstractmethod
-    def to_json(self):
+    def to_json(self) -> dict:
         pass
+
+    def from_json(self, kwargs: dict):
+        self._creation_time = dt.strptime(kwargs["extra"]["creation_time"], Dates.DATE_FORMAT.value)
+        self.name = kwargs["extra"]["type"]
 
     @abstractmethod
     def run(self):
@@ -36,9 +44,13 @@ class Task(ABC):
 
 class TimeBasedTask(Task, ABC):
 
-    def __init__(self, *, author_id, channel_id=None, server_id=None, date_string="* * * * *", creation_time=None):
-        Task.__init__(self, author_id=author_id, channel_id=channel_id, server_id=server_id,
-                      creation_time=creation_time)
+    def __init__(self, *, author_id,
+                 channel_id=None,
+                 server_id=None,
+                 date_string="* * * * *"):
+        Task.__init__(self, author_id=author_id,
+                      channel_id=channel_id,
+                      server_id=server_id)
 
         self.time = []
         self.date_string = date_string
@@ -81,16 +93,25 @@ class TimeBasedTask(Task, ABC):
 
     @property
     def nex_time_string(self):
-        return self._next_time.strftime(self.date_format)
+        return self._next_time.strftime(Dates.DATE_FORMAT.value)
 
-    def to_json(self):
-        return {"date_string": self.date_string,
-                "creation_time": self.creation_time_string,
-                "next_time": self.nex_time_string,
-                "author_id": self.author_id,
-                "channel_id": self.channel_id,
-                "server_id": self.server_id,
-                "type": self.__class__.__name__}
+    def to_json(self) -> dict:
+        return {"basic": {"date_string": self.date_string,
+                          "author_id": self.author_id,
+                          "channel_id": self.channel_id,
+                          "server_id": self.server_id,
+                          },
+                "extra": {"type": self.name,
+                          "creation_time": self.creation_time_string,
+                          "next_time": self.nex_time_string,
+                          "delete": self.delete
+                          }
+                }
+
+    def from_json(self, kwargs):
+        Task.from_json(self, kwargs)
+        self._next_time = dt.strptime(kwargs["extra"]["next_time"], Dates.DATE_FORMAT.value)
+        self.delete = kwargs["extra"]["delete"]
 
     @abstractmethod
     def run(self):
