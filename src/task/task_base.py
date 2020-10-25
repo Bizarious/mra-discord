@@ -63,10 +63,11 @@ class TimeBasedTask(Task, ABC):
                     buffer = ""
 
         self._next_time = None
-        self.get_next_date()
 
         # flags
         self.delete = False
+
+        self.get_next_date()
 
     def get_next_date(self):
         if len(self.time) == 0:
