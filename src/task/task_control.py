@@ -9,7 +9,7 @@ from containers import TaskContainer
 from system.ipc import IPC
 import time
 from enums import Dates
-from exceptions import UserHasNoTasks, TaskIdDoesNotExist
+from exceptions import UserHasNoTasksException, TaskIdDoesNotExistException, TaskCreationError
 
 
 def task(name):
@@ -100,9 +100,12 @@ class TaskManager(Process):
     def add_task(self, pkt):
         if pkt.author_id not in self.tasks.keys():
             self.tasks[pkt.author_id] = []  # author id in task list
-        tsk: tk.TimeBasedTask = self.task_dict[pkt.task](**pkt.kwargs)  # task creation
+        try:
+            tsk: tk.TimeBasedTask = self.task_dict[pkt.task](**pkt.kwargs)  # task creation
+        except Exception as e:
+            raise TaskCreationError(f"Task could not be created: {e}")
         tsk.name = pkt.task
-        self.task_queue.put((tsk.get_next_date(), tsk.creation_time, tsk))  # task is added to queue
+        self.task_queue.put((tsk.next_time, tsk.creation_time, tsk))  # task is added to queue
         self.tasks[pkt.author_id].append(tsk)  # task is appended to author list
 
     def add_task_from_dict(self, tsk_dict: dict):
@@ -138,18 +141,18 @@ class TaskManager(Process):
 
     def get_task(self, task_id, author_id):
         if author_id not in self.tasks.keys():
-            raise UserHasNoTasks("No active tasks")
+            raise UserHasNoTasksException("No active tasks")
         elif len(self.tasks[author_id]) == 0:
-            raise UserHasNoTasks("No active tasks")
+            raise UserHasNoTasksException("No active tasks")
         elif len(self.tasks[author_id]) <= task_id:
-            raise TaskIdDoesNotExist("Task id does not exist")
+            raise TaskIdDoesNotExistException("Task id does not exist")
         return self.tasks[author_id][task_id]
 
     def get_tasks(self, author_id):
         if author_id not in self.tasks.keys():
-            raise UserHasNoTasks("No active tasks")
+            raise UserHasNoTasksException("No active tasks")
         elif len(self.tasks[author_id]) == 0:
-            raise UserHasNoTasks
+            raise UserHasNoTasksException("No active tasks")
         tasks = []
         for t in self.tasks[author_id]:
             tasks.append(t.to_json())

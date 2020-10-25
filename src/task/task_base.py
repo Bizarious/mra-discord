@@ -63,6 +63,7 @@ class TimeBasedTask(Task, ABC):
                     buffer = ""
 
         self._next_time = None
+        self.get_next_date()
 
         # flags
         self.delete = False
