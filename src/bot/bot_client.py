@@ -14,8 +14,10 @@ class BotClient(commands.Bot):
         self.default_prefix = "."
         self.data = data  # database
         self.prefixes = self.data.load("prefixes")
+        intents = discord.Intents.default()
+        intents.members = True
 
-        commands.Bot.__init__(self, command_prefix=self.get_prefix)
+        commands.Bot.__init__(self, command_prefix=self.get_prefix, intents=intents)
 
         self.cogs_path = "./commands"
         self.register_cogs()
@@ -55,17 +57,8 @@ class BotClient(commands.Bot):
         print("online")
 
     async def on_message(self, message):
-        a_id = message.author.id
-
-        if a_id == self.bot_owner:
+        if self.permit.check_ignored(message):
             await self.process_commands(message)
-            return
-        if a_id not in self.permit.users:
-            if message.guild is None:
-                return
-            else:
-                if message.guild.id not in self.permit.guilds and message.channel.id not in self.permit.channels:
-                    await self.process_commands(message)
 
     async def on_guild_join(self, guild):
         self.change_prefix(self.default_prefix, guild.id)
