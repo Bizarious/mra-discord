@@ -1,5 +1,7 @@
+from discord import DMChannel
 from discord.ext import commands
 import random
+import asyncio
 from version import __version__
 
 
@@ -13,12 +15,22 @@ class Misc(commands.Cog):
 
     @commands.command()
     async def clear(self, ctx, n=5, mode=None):
-        if mode is None:
-            async for m in ctx.message.channel.history(limit=n):
-                if m.author == self.bot.user or m.content.startswith(self.bot.prefixes[str(ctx.message.guild.id)]):
-                    await m.delete()
-        elif mode == "all":
-            await ctx.channel.purge(limit=n)
+
+        def message_check(m):
+            if m.author == self.bot.user or m.content.startswith(self.bot.prefixes[str(ctx.message.guild.id)]):
+                return True
+            return False
+
+        if not isinstance(ctx.channel, DMChannel):
+            if mode is None:
+                await ctx.channel.purge(limit=n, check=message_check)
+            elif mode == "all":
+                await ctx.channel.purge(limit=n)
+        else:
+            async for message in ctx.author.dm_channel.history(limit=n):
+                if message.author == self.bot.user:
+                    await message.delete()
+                    await asyncio.sleep(0.2)
 
     @commands.command()
     async def version(self, ctx):
