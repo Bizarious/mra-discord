@@ -3,22 +3,29 @@ import discord
 from discord.ext import commands, tasks
 from permissions import PermissionsDict
 from system.ipc import IPC
+from .message_parser import MessageParser
 
 
 class BotClient(commands.Bot):
     def __init__(self, data, ipc: IPC):
 
         self.ipc = ipc
+
         self.default_prefix = "."
         self.data = data  # database
         self.prefixes = self.data.load("prefixes")
+
         commands.Bot.__init__(self, command_prefix=self.get_prefix)
+
         self.cogs_path = "./commands"
         self.register_cogs()
-        self.restart = False
         self.permit = PermissionsDict(self.data)
+        self.parser = MessageParser()
 
         self.bot_owner = self.permit.bot_owner
+
+        # flags
+        self.restart = False
 
     # Loop
     @tasks.loop(seconds=0.2)
@@ -31,10 +38,14 @@ class BotClient(commands.Bot):
             if pkt.cmd == "shutdown":
                 await self.shutdown()
             elif pkt.cmd == "send":
-                if pkt.channel_id is not None:
-                    await self.get_channel(pkt.channel_id).send(pkt.message)
-                else:
-                    await self.get_user(pkt.author_id).send(pkt.message)
+                ctx = self.parser.parse(pkt.message, self)
+                try:
+                    if ctx.privacy == "private":
+                        await self.get_user(pkt.author_id).send(ctx.message)
+                    elif ctx.privacy == "public":
+                        await self.get_channel(pkt.channel_id).send(ctx.message)
+                except Exception as e:
+                    print(e)
 
     # Events
     async def on_ready(self):
