@@ -4,8 +4,23 @@ from discord.ext import commands
 class PermissionsDict:
 
     def __init__(self, data):
+        self.permission_needed = ["bot_owner",
+                                  "ignored_users",
+                                  "ignored_guilds",
+                                  "ignored_channels",
+                                  "blacklist"]
         self.data = data
         self.permissions = self.data.load("permissions")
+        self.first_startup()
+
+    def first_startup(self):
+        changed = False
+        for s in self.permission_needed:
+            if s not in self.permissions.keys():
+                changed = True
+                self.permissions[s] = []
+        if changed:
+            self.data.save(self.permissions, "permissions")
 
     @property
     def bot_owner(self):
@@ -29,8 +44,6 @@ class PermissionsDict:
 
     def add_ignore(self, subject, subject_id):
         real_subject = f"ignored_{subject}"
-        if real_subject not in self.permissions.keys():
-            self.permissions[real_subject] = []
         self.permissions[real_subject].append(subject_id)
         self.data.save(self.permissions, "permissions")
 
