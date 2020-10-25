@@ -131,6 +131,8 @@ dmypy.json
 # data
 data/
 
+exp
+
 .idea
 
 

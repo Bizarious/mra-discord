@@ -62,6 +62,8 @@ class BotClient(commands.Bot):
     async def on_command_error(self, ctx, exception):
         if isinstance(exception, commands.errors.CheckFailure):
             await ctx.send("No Permissions")
+        elif isinstance(exception, commands.CommandInvokeError):
+            await ctx.send(exception.original)
         else:
             await ctx.send(exception)
 

@@ -1,6 +1,6 @@
 from discord.ext import commands
 from tabulate import tabulate as tab
-from permissions import owner_check
+from permissions import owner_check, is_it_me
 
 
 class Tasks(commands.Cog):
@@ -16,26 +16,24 @@ class Tasks(commands.Cog):
         self.bot.ipc.send(dst="task",
                           package=t, cmd="task",
                           task="Reminder",
-                          author_id=ctx.message.author.id)
+                          author_id=ctx.message.author.id,
+                          channel_id=ctx.message.channel.id)
 
     @commands.command()
-    async def gt(self, ctx, system=None):
-        if system is not None:
-            if not owner_check(ctx):
-                raise commands.errors.CheckFailure()
-            else:
-                author_id = 0
-        else:
-            author_id = ctx.author.id
+    async def gt(self, ctx, a_id=None):
+        author_id = ctx.author.id
+        if a_id is not None:
+            if not is_it_me(ctx, int(a_id)) and not owner_check(ctx):
+                raise commands.CheckFailure()
+            author_id = int(a_id)
         t = self.bot.ipc.pack()
         pipe = self.bot.ipc.send(dst="task",
                                  create_pipe=True,
                                  package=t, cmd="get_tasks",
                                  author_id=author_id)
-        tasks: list = pipe.recv()
-        if tasks is None:
-            await ctx.send("You have no active tasks")
-            return
+        tasks = pipe.recv()
+        if isinstance(tasks, Exception):
+            raise tasks
         headers = ["ID", "Type", "Creation Date", "Next Execution Date"]
         table = []
         for i in range(len(tasks)):
@@ -46,14 +44,12 @@ class Tasks(commands.Cog):
         await ctx.send(f"```{tab(table, headers=headers)}```")
 
     @commands.command("dt")
-    async def delete_task(self, ctx, task_id, system=None):
-        if system is not None:
-            if not owner_check(ctx):
-                raise commands.errors.CheckFailure()
-            else:
-                author_id = 0
-        else:
-            author_id = ctx.author.id
+    async def delete_task(self, ctx, task_id, a_id=None):
+        author_id = ctx.author.id
+        if a_id is not None:
+            if not is_it_me(ctx, int(a_id)) and not owner_check(ctx):
+                raise commands.CheckFailure()
+            author_id = int(a_id)
         t = self.bot.ipc.pack()
         pipe = self.bot.ipc.send(dst="task",
                                  create_pipe=True,
@@ -62,8 +58,8 @@ class Tasks(commands.Cog):
                                  author_id=author_id,
                                  task_id=task_id)
         answer = pipe.recv()
-        if answer is not None:
-            await ctx.send(answer)
+        if isinstance(answer, Exception):
+            raise answer
 
 
 def setup(bot):

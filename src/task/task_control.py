@@ -9,6 +9,7 @@ from containers import TaskContainer
 from system.ipc import IPC
 import time
 from enums import Dates
+from exceptions import UserHasNoTasks, TaskIdDoesNotExist
 
 
 def task(name):
@@ -25,12 +26,20 @@ class TaskExecutor(Thread):
         self.ipc = ipc
 
     def run(self):
-        message = self.task.run()
+        try:
+            message = self.task.run()
+        except Exception as e:
+            message = "send", f"An exception occurred while executing your task: {e}"
+
         if message is not None:
             pkt = self.ipc.pack()
-            self.ipc.send(dst="bot", package=pkt, author_id=self.task.author_id, channel_id=self.task.channel_id,
+            self.ipc.send(dst="bot",
+                          package=pkt,
+                          author_id=self.task.author_id,
+                          channel_id=self.task.channel_id,
                           cmd=message[0],
                           message=message[1])
+
         if self.task.delete:
             del self.task
 
@@ -93,8 +102,8 @@ class TaskManager(Process):
             self.tasks[pkt.author_id] = []  # author id in task list
         tsk: tk.TimeBasedTask = self.task_dict[pkt.task](**pkt.kwargs)  # task creation
         tsk.name = pkt.task
-        self.tasks[pkt.author_id].append(tsk)  # task is appended to author list
         self.task_queue.put((tsk.get_next_date(), tsk.creation_time, tsk))  # task is added to queue
+        self.tasks[pkt.author_id].append(tsk)  # task is appended to author list
 
     def add_task_from_dict(self, tsk_dict: dict):
         if dt.now() > dt.strptime(tsk_dict["extra"]["next_time"], Dates.DATE_FORMAT.value) and \
@@ -129,16 +138,18 @@ class TaskManager(Process):
 
     def get_task(self, task_id, author_id):
         if author_id not in self.tasks.keys():
-            raise RuntimeError("You have no active tasks")
+            raise UserHasNoTasks("No active tasks")
+        elif len(self.tasks[author_id]) == 0:
+            raise UserHasNoTasks("No active tasks")
         elif len(self.tasks[author_id]) <= task_id:
-            raise RuntimeError("Task Id noes not exist")
+            raise TaskIdDoesNotExist("Task id does not exist")
         return self.tasks[author_id][task_id]
 
     def get_tasks(self, author_id):
         if author_id not in self.tasks.keys():
-            return None
+            raise UserHasNoTasks("No active tasks")
         elif len(self.tasks[author_id]) == 0:
-            return None
+            raise UserHasNoTasks
         tasks = []
         for t in self.tasks[author_id]:
             tasks.append(t.to_json())
@@ -176,22 +187,28 @@ class TaskManager(Process):
 
     def parse_commands(self, pkt):
         if pkt is not None:
-            if pkt.cmd == "stop":
-                self.data.save(self.export_tasks(), "tasks")
-                return "stop"
-            elif pkt.cmd == "task":
-                self.add_task(pkt)
-                self.set_next_date()
-            elif pkt.cmd == "get_tasks":
-                tasks = self.get_tasks(pkt.author_id)
-                pkt.pipe.send(tasks)
-            elif pkt.cmd == "del_task":
-                try:
+            try:
+                if pkt.cmd == "stop":
+                    self.data.save(self.export_tasks(), "tasks")
+                    return "stop"
+                elif pkt.cmd == "task":
+                    self.add_task(pkt)
+                    self.set_next_date()
+                elif pkt.cmd == "get_tasks":
+                    tasks = self.get_tasks(pkt.author_id)
+                    pkt.pipe.send(tasks)
+                elif pkt.cmd == "del_task":
                     tsk = self.get_task(int(pkt.task_id) - 1, pkt.author_id)
                     self.delete_task(tsk)
                     pkt.pipe.send(None)
-                except RuntimeError as e:
+            except Exception as e:
+                if pkt.pipe is not None:
                     pkt.pipe.send(e)
+                else:
+                    self.ipc.send(dst="bot", package=pkt,
+                                  cmd="send",
+                                  message=f"An error occurred in the Task Manager: {e}")
+
         return None
 
     def run(self):
