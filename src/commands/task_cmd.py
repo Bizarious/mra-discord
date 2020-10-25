@@ -7,8 +7,8 @@ class Tasks(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command()
-    async def task(self, ctx, date_string, *, message):
+    @commands.command("rmdme")
+    async def remind_me(self, ctx, date_string, *, message):
         t = self.bot.ipc.pack(author_id=ctx.message.author.id,
                               channel_id=ctx.message.channel.id,
                               message=message,
