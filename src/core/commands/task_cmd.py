@@ -8,17 +8,20 @@ class Tasks(commands.Cog):
         self.bot = bot
 
     @commands.command("rmdme")
-    async def remind_me(self, ctx, date_string, label, *, message):
+    async def remind_me(self, ctx, date_string, number, label, *, message):
         t = self.bot.ipc.pack(author_id=ctx.message.author.id,
                               channel_id=ctx.message.channel.id,
                               message=message,
                               date_string=date_string,
-                              label=label)
+                              label=label,
+                              number=int(number)
+                              )
         self.bot.ipc.send(dst="task",
                           package=t, cmd="task",
                           task="Reminder",
                           author_id=ctx.message.author.id,
-                          channel_id=ctx.message.channel.id)
+                          channel_id=ctx.message.channel.id
+                          )
 
     @commands.command()
     async def gt(self, ctx, a_id=None):

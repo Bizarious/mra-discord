@@ -58,7 +58,7 @@ class TimeBasedTask(Task, ABC):
     def __init__(self, *, author_id,
                  channel_id=None,
                  server_id=None,
-                 date_string="* * * * *", label=None):
+                 date_string="* * * * *", label=None, number=0):
         Task.__init__(self, author_id=author_id,
                       channel_id=channel_id,
                       server_id=server_id,
@@ -66,7 +66,12 @@ class TimeBasedTask(Task, ABC):
 
         self.time = []
         self.date_string = date_string
+        if number == 0:
+            self.counter = -1
+        else:
+            self.counter = number
         if " " not in date_string:
+            self.counter = number
             for c in ["h", "m", "s"]:
                 if date_string.count(c) > 1:
                     raise TaskCreationError(f"Multiple statements for '{c}' are not allowed")
@@ -85,11 +90,16 @@ class TimeBasedTask(Task, ABC):
         self.get_next_date()
 
     def get_next_date(self):
+        if self.counter > 0:
+            self.counter = self.counter - 1
         if len(self.time) == 0:
+            if self.counter == 0:
+                self.delete = True
             dates = cr(self.date_string, dt.now())
             self._next_time = dates.get_next(dt)
         else:
-            self.delete = True
+            if self.counter == 0:
+                self.delete = True
             hours = 0
             minutes = 0
             seconds = 0
@@ -118,7 +128,8 @@ class TimeBasedTask(Task, ABC):
                           "creation_time": self.creation_time_string,
                           "next_time": self.nex_time_string,
                           "delete": self.delete,
-                          "label": self.label
+                          "label": self.label,
+                          "counter": self.counter
                           }
                 }
 
@@ -126,6 +137,7 @@ class TimeBasedTask(Task, ABC):
         Task.from_json(self, kwargs)
         self._next_time = dt.strptime(kwargs["extra"]["next_time"], Dates.DATE_FORMAT.value)
         self.delete = kwargs["extra"]["delete"]
+        self.counter = kwargs["extra"]["counter"]
 
     @abstractmethod
     def run(self):
