@@ -6,12 +6,22 @@ from enums import Dates
 
 class Task(ABC):
 
-    def __init__(self, *, author_id, channel_id=None, server_id=None):
+    def __init__(self, *, author_id, channel_id=None, server_id=None, label=None):
         self.author_id = author_id
         self.channel_id = channel_id
         self.server_id = server_id
+        self.label = label
         self._creation_time = dt.now()
         self._name = None
+        self._kwargs = None
+
+    @property
+    def kwargs(self):
+        return self._kwargs
+
+    @kwargs.setter
+    def kwargs(self, kwargs):
+        self._kwargs = kwargs
 
     @property
     def creation_time(self):
@@ -47,10 +57,11 @@ class TimeBasedTask(Task, ABC):
     def __init__(self, *, author_id,
                  channel_id=None,
                  server_id=None,
-                 date_string="* * * * *"):
+                 date_string="* * * * *", label=None):
         Task.__init__(self, author_id=author_id,
                       channel_id=channel_id,
-                      server_id=server_id)
+                      server_id=server_id,
+                      label=label)
 
         self.time = []
         self.date_string = date_string
@@ -98,15 +109,12 @@ class TimeBasedTask(Task, ABC):
         return self._next_time.strftime(Dates.DATE_FORMAT.value)
 
     def to_json(self) -> dict:
-        return {"basic": {"date_string": self.date_string,
-                          "author_id": self.author_id,
-                          "channel_id": self.channel_id,
-                          "server_id": self.server_id,
-                          },
+        return {"basic": self.kwargs,
                 "extra": {"type": self.name,
                           "creation_time": self.creation_time_string,
                           "next_time": self.nex_time_string,
-                          "delete": self.delete
+                          "delete": self.delete,
+                          "label": self.label
                           }
                 }
 

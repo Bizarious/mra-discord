@@ -8,11 +8,12 @@ class Tasks(commands.Cog):
         self.bot = bot
 
     @commands.command("rmdme")
-    async def remind_me(self, ctx, date_string, *, message):
+    async def remind_me(self, ctx, date_string, label, *, message):
         t = self.bot.ipc.pack(author_id=ctx.message.author.id,
                               channel_id=ctx.message.channel.id,
                               message=message,
-                              date_string=date_string)
+                              date_string=date_string,
+                              label=label)
         self.bot.ipc.send(dst="task",
                           package=t, cmd="task",
                           task="Reminder",
@@ -34,11 +35,12 @@ class Tasks(commands.Cog):
         tasks = pipe.recv()
         if isinstance(tasks, Exception):
             raise tasks
-        headers = ["ID", "Type", "Creation Date", "Next Execution Date"]
+        headers = ["ID", "Type", "Label", "Creation Date", "Next Execution Date"]
         table = []
         for i in range(len(tasks)):
             table.append([i+1,
                           tasks[i]["extra"]["type"],
+                          tasks[i]["extra"]["label"],
                           tasks[i]["extra"]["creation_time"],
                           tasks[i]["extra"]["next_time"]])
         await ctx.send(f"```{tab(table, headers=headers)}```")
