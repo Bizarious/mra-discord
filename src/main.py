@@ -1,9 +1,9 @@
 import sys
-from bot.bot_client import BotClient
-from system.system_commands import restart
-from database.database import Data
-from system.ipc import IPC
-from task.task_control import TaskManager
+from core.bot.bot_client import BotClient
+from core.system.system_commands import restart
+from core.database.database import Data
+from core.system.ipc import IPC
+from core.task.task_control import TaskManager
 
 
 class Main:

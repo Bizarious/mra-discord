@@ -1,5 +1,5 @@
 from discord.ext import commands
-from permissions import owner
+from core.permissions import owner
 from tabulate import tabulate as tab
 
 

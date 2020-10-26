@@ -1,6 +1,6 @@
 from discord.ext import commands
 from tabulate import tabulate as tab
-from permissions import owner_check, is_it_me
+from core.permissions import owner_check, is_it_me
 
 
 class Tasks(commands.Cog):

@@ -1,15 +1,15 @@
 import importlib
 import os
-import task.task_base as tk
+from core.task import task_base as tk
 from datetime import datetime as dt, timedelta as td
 from queue import PriorityQueue
 from multiprocessing import Process
 from threading import Thread
-from containers import TaskContainer
-from system.ipc import IPC
+from core.containers import TaskContainer
+from core.system.ipc import IPC
 import time
-from enums import Dates
-from exceptions import UserHasNoTasksException, TaskIdDoesNotExistException, TaskCreationError
+from core.enums import Dates
+from core.exceptions import UserHasNoTasksException, TaskIdDoesNotExistException, TaskCreationError
 
 
 def task(name):
@@ -52,8 +52,8 @@ class TaskManager(Process):
         self.task_queue = PriorityQueue()
         self.ipc = ipc
 
-        self.tasks_path = "./tasks"
-        self.import_tasks_path = "tasks"
+        self.core_tasks_path = "./core/tasks"
+        self.core_import_tasks_path = "core.tasks"
         self.data = data
 
         self.tasks = {}  # author mapping
@@ -81,9 +81,9 @@ class TaskManager(Process):
                 self.task_dict[name] = task_class
 
     def register_all_tasks(self):
-        for file in os.listdir(self.tasks_path):
+        for file in os.listdir(self.core_tasks_path):
             if file.endswith(".py") and not file.startswith("__"):
-                self.register_task(self.import_tasks_path, file[:-3])
+                self.register_task(self.core_import_tasks_path, file[:-3])
 
     def import_tasks(self, tasks: list):
         for t in tasks:

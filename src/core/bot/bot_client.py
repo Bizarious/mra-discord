@@ -1,8 +1,8 @@
 import os
 import discord
 from discord.ext import commands, tasks
-from permissions import PermissionsDict
-from system.ipc import IPC
+from core.permissions import PermissionsDict
+from core.system.ipc import IPC
 from .message_parser import MessageParser
 
 
@@ -19,7 +19,8 @@ class BotClient(commands.Bot):
 
         commands.Bot.__init__(self, command_prefix=self.get_prefix, intents=intents)
 
-        self.cogs_path = "./commands"
+        self.core_cogs_path = "./core/commands"
+        self.core_import_cogs_path = "core.commands"
         self.register_cogs()
         self.permit = PermissionsDict(self.data)
         self.parser = MessageParser()
@@ -95,9 +96,9 @@ class BotClient(commands.Bot):
         self.data.save(self.prefixes, "prefixes")
 
     def register_cogs(self):
-        for filename in os.listdir(self.cogs_path):
+        for filename in os.listdir(self.core_cogs_path):
             if filename.endswith('.py') and not filename.startswith('_'):
-                self.load_extension(f'commands.{filename[:-3]}')
+                self.load_extension(f'{self.core_import_cogs_path}.{filename[:-3]}')
 
     def get_guild_id(self, name):
         for g in self.guilds:

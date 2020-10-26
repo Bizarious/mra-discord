@@ -1,5 +1,5 @@
 from multiprocessing import Queue
-from containers import TransferPackage
+from core.containers import TransferPackage
 from multiprocessing import Pipe
 
 

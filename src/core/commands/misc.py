@@ -2,7 +2,7 @@ from discord import DMChannel
 from discord.ext import commands
 import random
 import asyncio
-from version import __version__
+from core.version import __version__
 
 
 class Misc(commands.Cog):

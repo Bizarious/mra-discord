@@ -1,5 +1,5 @@
-from task.task_base import TimeBasedTask
-from task.task_control import task
+from core.task import TimeBasedTask
+from core.task import task
 
 
 @task("Reminder")
