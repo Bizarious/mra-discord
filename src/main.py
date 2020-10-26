@@ -25,6 +25,7 @@ class Main:
 
         t = self.ipc.pack()
         self.ipc.send(dst="task", package=t, cmd="stop")
+        self.task_manager.join()
 
         if self.bot.restart:
             restart(sys.argv)

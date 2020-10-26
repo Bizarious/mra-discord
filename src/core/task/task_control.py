@@ -20,10 +20,10 @@ def task(name):
 
 
 class TaskExecutor(Thread):
-    def __init__(self, tsk: tk.TimeBasedTask, ipc: IPC):
+    def __init__(self, tsk: tk.TimeBasedTask, manager):
         Thread.__init__(self)
         self.task = tsk
-        self.ipc = ipc
+        self.manager = manager
 
     def run(self):
         try:
@@ -32,16 +32,17 @@ class TaskExecutor(Thread):
             message = "send", f"An exception occurred while executing your task: {e}"
 
         if message is not None:
-            pkt = self.ipc.pack()
-            self.ipc.send(dst="bot",
-                          package=pkt,
-                          author_id=self.task.author_id,
-                          channel_id=self.task.channel_id,
-                          cmd=message[0],
-                          message=message[1])
+            pkt = self.manager.ipc.pack()
+            self.manager.ipc.send(dst="bot",
+                                  package=pkt,
+                                  author_id=self.task.author_id,
+                                  channel_id=self.task.channel_id,
+                                  cmd=message[0],
+                                  message=message[1])
 
         if self.task.delete:
             del self.task
+        self.manager.running_tasks.remove(self)
 
 
 class TaskManager(Process):
@@ -51,6 +52,7 @@ class TaskManager(Process):
         # Queues
         self.task_queue = PriorityQueue()
         self.ipc = ipc
+        self.running_tasks = []
 
         self.core_tasks_path = "./core/tasks"
         self.core_import_tasks_path = "core.tasks"
@@ -187,13 +189,17 @@ class TaskManager(Process):
             else:
                 self.delete_task_from_mapping(tsk)
             self.set_next_date()
-            executor = TaskExecutor(tsk, self.ipc)
+            executor = TaskExecutor(tsk, self)
+            self.running_tasks.append(executor)
             executor.start()
 
     def parse_commands(self, pkt):
         if pkt is not None:
             try:
                 if pkt.cmd == "stop":
+                    t: Thread
+                    for t in self.running_tasks:
+                        t.join()
                     self.data.save(self.export_tasks(), "tasks")
                     return "stop"
                 elif pkt.cmd == "task":
