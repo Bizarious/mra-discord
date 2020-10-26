@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 
 
 def measure_temp():
@@ -7,5 +8,6 @@ def measure_temp():
 
 
 def restart(args):
+    time.sleep(3)
     os.system("clear")
     os.execv(sys.executable, [sys.executable.split("/")[-1]] + args)
