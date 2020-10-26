@@ -42,10 +42,13 @@ class BotClient(commands.Bot):
             elif pkt.cmd == "send":
                 ctx = self.parser.parse(pkt.message, self)
                 try:
-                    if ctx.privacy == "private":
+                    if ctx.privacy == "public" and hasattr(pkt, "channel_id"):
+                        if pkt.channel_id is not None:
+                            await self.get_channel(pkt.channel_id).send(ctx.message)
+                        else:
+                            await self.get_user(pkt.author_id).send(ctx.message)
+                    else:
                         await self.get_user(pkt.author_id).send(ctx.message)
-                    elif ctx.privacy == "public":
-                        await self.get_channel(pkt.channel_id).send(ctx.message)
                 except Exception as e:
                     print(e)
 
