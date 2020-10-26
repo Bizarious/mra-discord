@@ -13,7 +13,7 @@ class Permissions(commands.Cog):
         try:
             int(subject_id)
         except ValueError:
-            raise AttributeError(f"{subject_id} is no valid number")
+            raise AttributeError(f"'{subject_id}' is no valid number")
 
         if subject == "guild":
             guild = self.bot.get_guild(int(subject_id))
@@ -49,7 +49,7 @@ class Permissions(commands.Cog):
                            f'None of the commands from this user will be executed anymore.')
 
         else:
-            raise AttributeError(f"{subject} is no valid argument")
+            raise AttributeError(f"'{subject}' is no valid argument")
 
     @commands.command()
     @owner()
@@ -57,7 +57,7 @@ class Permissions(commands.Cog):
         try:
             int(subject_id)
         except ValueError:
-            raise AttributeError(f"{subject_id} is no valid number")
+            raise AttributeError(f"'{subject_id}' is no valid number")
 
         if subject == "guild":
             guild = self.bot.get_guild(int(subject_id))
@@ -93,7 +93,7 @@ class Permissions(commands.Cog):
                            f'Commands from this user are executed again.')
 
         else:
-            raise AttributeError(f"{subject} is no valid argument")
+            raise AttributeError(f"'{subject}' is no valid argument")
 
     @commands.command()
     @owner()
