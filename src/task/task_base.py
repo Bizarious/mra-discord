@@ -2,6 +2,7 @@ from croniter import croniter as cr
 from datetime import datetime as dt, timedelta as td
 from abc import ABC, abstractmethod
 from enums import Dates
+from exceptions import TaskCreationError
 
 
 class Task(ABC):
@@ -66,6 +67,9 @@ class TimeBasedTask(Task, ABC):
         self.time = []
         self.date_string = date_string
         if " " not in date_string:
+            for c in ["h", "m", "s"]:
+                if date_string.count(c) > 1:
+                    raise TaskCreationError(f"Multiple statements for '{c}' are not allowed")
             buffer = ""
             for c in date_string:
                 buffer += c

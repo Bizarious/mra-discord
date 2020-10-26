@@ -212,7 +212,7 @@ class TaskManager(Process):
                 else:
                     self.ipc.send(dst="bot", package=pkt,
                                   cmd="send",
-                                  message=f"An error occurred in the Task Manager: {e}")
+                                  message=f"<p>An error occurred in the Task Manager: {e}")
 
         return None
 
