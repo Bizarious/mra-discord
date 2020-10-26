@@ -2,7 +2,7 @@ import os
 import discord
 from discord.ext import commands, tasks
 from core.permissions import PermissionsDict
-from core.system.ipc import IPC
+from core.system import IPC
 from .message_parser import MessageParser
 
 
