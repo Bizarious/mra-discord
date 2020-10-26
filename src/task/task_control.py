@@ -105,6 +105,7 @@ class TaskManager(Process):
         except Exception as e:
             raise TaskCreationError(f"Task could not be created: {e}")
         tsk.name = pkt.task
+        tsk.kwargs = pkt.kwargs
         self.task_queue.put((tsk.next_time, tsk.creation_time, tsk))  # task is added to queue
         self.tasks[pkt.author_id].append(tsk)  # task is appended to author list
 
@@ -115,6 +116,7 @@ class TaskManager(Process):
         if tsk_dict["basic"]["author_id"] not in self.tasks.keys():
             self.tasks[tsk_dict["basic"]["author_id"]] = []
         tsk: tk.TimeBasedTask = self.task_dict[tsk_dict["extra"]["type"]](**tsk_dict["basic"])
+        tsk.kwargs = tsk_dict["basic"]
         tsk.from_json(tsk_dict)
         if " " in tsk_dict["basic"]["date_string"]:
             next_time = tsk.get_next_date()
