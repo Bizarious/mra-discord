@@ -142,6 +142,7 @@ class TaskManager(Process):
         self.delete_task_from_mapping(tsk)
         self.delete_task_from_queue(tsk)
         del tsk
+        self.set_next_date()
 
     def get_task(self, task_id, author_id):
         if author_id not in self.tasks.keys():
