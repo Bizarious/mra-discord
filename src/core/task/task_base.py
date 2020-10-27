@@ -90,16 +90,12 @@ class TimeBasedTask(Task, ABC):
         self.get_next_date()
 
     def get_next_date(self):
-        if self.counter > 0:
-            self.counter = self.counter - 1
         if len(self.time) == 0:
             if self.counter == 0:
                 self.delete = True
             dates = cr(self.date_string, dt.now())
             self._next_time = dates.get_next(dt)
         else:
-            if self.counter == 0:
-                self.delete = True
             hours = 0
             minutes = 0
             seconds = 0
@@ -122,6 +118,16 @@ class TimeBasedTask(Task, ABC):
     def nex_time_string(self):
         return self._next_time.strftime(Dates.DATE_FORMAT.value)
 
+    def calc_counter(self):
+        if self.counter > 0:
+            self.counter = self.counter - 1
+        if len(self.time) == 0:
+            if self.counter == 0:
+                self.delete = True
+        else:
+            if self.counter == 0:
+                self.delete = True
+
     def to_json(self) -> dict:
         return {"basic": self.kwargs,
                 "extra": {"type": self.name,
@@ -142,6 +148,9 @@ class TimeBasedTask(Task, ABC):
     @abstractmethod
     def run(self):
         pass
+
+    def execute(self):
+        return self.run()
 
 
 if __name__ == "__main__":

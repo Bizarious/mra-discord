@@ -68,12 +68,15 @@ class BotClient(commands.Bot):
         self.change_prefix(self.default_prefix, guild.id)
 
     async def on_command_error(self, ctx, exception):
-        if isinstance(exception, commands.errors.CheckFailure):
-            await ctx.send("No Permissions")
-        elif isinstance(exception, commands.CommandInvokeError):
-            await ctx.send(exception.original)
-        else:
-            await ctx.send(exception)
+        try:
+            if isinstance(exception, commands.errors.CheckFailure):
+                await ctx.send("No Permissions")
+            elif isinstance(exception, commands.CommandInvokeError):
+                await ctx.send(exception.original)
+            else:
+                await ctx.send(exception)
+        except discord.HTTPException:
+            print("Cannot send error message due to network failure")
 
     # utility functions
     async def shutdown(self):

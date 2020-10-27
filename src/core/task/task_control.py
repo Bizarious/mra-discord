@@ -4,7 +4,7 @@ from core.task import task_base as tk
 from datetime import datetime as dt, timedelta as td
 from queue import PriorityQueue
 from multiprocessing import Process
-from threading import Thread
+from threading import Thread, Lock
 from core.containers import TaskContainer
 from core.system import IPC
 import time
@@ -27,7 +27,7 @@ class TaskExecutor(Thread):
 
     def run(self):
         try:
-            message = self.task.run()
+            message = self.task.execute()
         except Exception as e:
             message = "send", f"An exception occurred while executing your task: {e}"
 
@@ -40,9 +40,9 @@ class TaskExecutor(Thread):
                                   cmd=message[0],
                                   message=message[1])
 
-        if self.task.delete:
-            del self.task
+        self.manager.running_tasks_lock.acquire()
         self.manager.running_tasks.remove(self)
+        self.manager.running_tasks_lock.release()
 
 
 class TaskManager(Process):
@@ -53,6 +53,7 @@ class TaskManager(Process):
         self.task_queue = PriorityQueue()
         self.ipc = ipc
         self.running_tasks = []
+        self.running_tasks_lock = Lock()
 
         self.core_tasks_path = "./core/tasks"
         self.core_import_tasks_path = "core.tasks"
@@ -184,6 +185,7 @@ class TaskManager(Process):
         if self.check_date():
             tsk_tuple: tuple = self.task_queue.get()
             tsk: tk.TimeBasedTask = tsk_tuple[2]
+            tsk.calc_counter()
             if not tsk.delete:
                 new_task_tuple = (tsk.get_next_date(), tsk.creation_time, tsk)
                 self.task_queue.put(new_task_tuple)
@@ -198,10 +200,6 @@ class TaskManager(Process):
         if pkt is not None:
             try:
                 if pkt.cmd == "stop":
-                    t: Thread
-                    for t in self.running_tasks:
-                        t.join()
-                    self.data.save(self.export_tasks(), "tasks")
                     return "stop"
                 elif pkt.cmd == "task":
                     self.add_task(pkt)
@@ -223,11 +221,22 @@ class TaskManager(Process):
 
         return None
 
+    def stop(self):
+        t: Thread
+        for t in self.running_tasks:
+            t.join()
+        self.data.save(self.export_tasks(), "tasks")
+
     def run(self):
-        while True:
-            pkt = self.ipc.check_queue("task")
-            stop = self.parse_commands(pkt)
-            if stop == "stop":
-                break
-            self.tasks_loop()
-            time.sleep(0.2)
+        try:
+            while True:
+                pkt = self.ipc.check_queue("task")
+                stop = self.parse_commands(pkt)
+                if stop == "stop":
+                    self.stop()
+                    break
+                self.tasks_loop()
+                time.sleep(0.2)
+        except KeyboardInterrupt:
+            self.stop()
+

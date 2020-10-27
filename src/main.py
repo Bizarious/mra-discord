@@ -21,8 +21,7 @@ class Main:
 
     def run(self):
         self.task_manager.start()
-        self.bot.run(self.bot_token)
-
+        self.bot.run(self.bot_token, reconnect=True)
         t = self.ipc.pack()
         self.ipc.send(dst="task", package=t, cmd="stop")
         self.task_manager.join()
