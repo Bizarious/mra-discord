@@ -2,7 +2,7 @@ from croniter import croniter as cr
 from datetime import datetime as dt, timedelta as td
 from abc import ABC, abstractmethod
 from core.enums import Dates
-from core.exceptions import TaskCreationError
+from .task_exceptions import TaskCreationError
 
 
 class Task(ABC):

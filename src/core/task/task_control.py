@@ -9,7 +9,7 @@ from core.containers import TaskContainer
 from core.system import IPC
 import time
 from core.enums import Dates
-from core.exceptions import UserHasNoTasksException, TaskIdDoesNotExistException, TaskCreationError
+from .task_exceptions import UserHasNoTasksException, TaskIdDoesNotExistException, TaskCreationError
 
 
 def task(name):
