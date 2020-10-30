@@ -130,7 +130,7 @@ dmypy.json
 
 # data
 data/
-
+config/
 experiments/
 
 .idea
