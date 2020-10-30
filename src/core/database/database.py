@@ -2,57 +2,88 @@ import os
 import json
 
 
-class Data:
-    path_data = "./data"
-    path_config = "./data/config"
-
-    def __init__(self):
-        self.files_data = {"permissions": f"{self.path_data}/permissions.json",
-                           "prefixes": f"{self.path_data}/prefixes.json",
-                           "tasks": f"{self.path_data}/tasks.json"}
-        self.files_config = {"tokens": f"{self.path_config}/tokens.json"}
-
-        self.first_startup()
+class DataBasic:
+    path = ""
 
     def first_startup(self):
-        if not os.path.exists(self.path_data):
-            os.mkdir(self.path_data)
-            print("created data directory")
+        if not os.path.exists(self.path):
+            os.mkdir(self.path)
+            print(f"created {self.path} directory")
 
-        for k in self.files_data.keys():
-            if not os.path.exists(self.files_data[k]):
-                file = open(self.files_data[k], "w")
-                json.dump({}, file)
-                print(f"created {k}")
 
-        if not os.path.exists(self.path_config):
-            os.mkdir(self.path_config)
-            print("created data directory")
+class Data(DataBasic):
+    path = "./data"
 
-        for k in self.files_config.keys():
-            if not os.path.exists(self.files_config[k]):
-                file = open(self.files_config[k], "w")
-                json.dump({}, file)
-                print(f"created {k}")
+    def __init__(self):
 
-    def load(self, file):
-        if file in self.files_data.keys():
-            f = open(self.files_data[file])
-            print(f"loaded {file}")
-            return json.load(f)
-        elif file in self.files_config.keys():
-            f = open(self.files_config[file])
-            print(f"loaded {file}")
-            return json.load(f)
+        self._buffer = {}
+        self.first_startup()
 
-    def save(self, data, file):
-        if file in self.files_data.keys():
-            f = open(self.files_data[file], "w")
-            json.dump(data, f)
+    @property
+    def buffer(self):
+        return self._buffer
+
+    @staticmethod
+    def check_path(path):
+        if not os.path.exists(path):
+            os.mkdir(path)
+            print(f"Created {path}")
+
+    @staticmethod
+    def check_file(file: str, path: str):
+        if not os.path.exists(f"{path}/{file}"):
+            f = open(f"{path}/{file}", "w")
+            if file.endswith(".json"):
+                json.dump({}, f)
             f.close()
-            print(f"saved {file}")
-        elif file in self.files_config.keys():
-            f = open(self.files_config[file], "w")
+
+    def _load_file(self, *, file: str, path: str = ""):
+        path = f"{self.path}/{path}"
+        self.check_path(path)
+        self.check_file(file, path)
+        return open(f"{path}/{file}")
+
+    def get(self, *, file, path: str = "", buffer: bool = True):
+        if file not in self._buffer.keys():
+            f = self._load_file(file=file, path=path)
+            content = f.read()
+            if buffer:
+                self._buffer[file] = content
+            return content
+        else:
+            return self._buffer[file]
+
+    def get_json(self, *, file, path: str = "", buffer: bool = True):
+        if file not in self._buffer.keys():
+            f = self._load_file(file=file + ".json", path=path)
+            content = json.load(f)
+            if buffer:
+                self._buffer[file] = content
+            return content
+        else:
+            return self._buffer[file]
+
+    def _save_file(self, *, data, file, path=""):
+        path = f"{self.path}/{path}"
+        self.check_path(path)
+        f = open(f"{path}/{file}", "w")
+        if file.endswith(".json"):
             json.dump(data, f)
-            f.close()
-            print(f"saved {file}")
+        else:
+            f.write(data)
+        f.close()
+
+    def set(self, *, file, path: str = "", data, buffer: bool = True):
+        if buffer:
+            self._buffer[file] = data
+        self._save_file(data=data, file=file, path=path)
+
+    def set_json(self, *, file, path: str = "", data, buffer: bool = True):
+        if buffer:
+            self._buffer[file] = data
+        self._save_file(data=data, file=file + ".json", path=path)
+
+
+if __name__ == "__main__":
+    d = Data()
+    d.get_json(file="test", path="testing")
