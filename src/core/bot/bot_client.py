@@ -2,18 +2,21 @@ import os
 import discord
 from discord.ext import commands, tasks
 from core.permissions import PermissionsDict
+from core.database import Data, ConfigManager
 from core.system import IPC
 from .message_parser import MessageParser
 
 
 class BotClient(commands.Bot):
-    def __init__(self, data, ipc: IPC):
+    def __init__(self, data, config, ipc: IPC):
 
         self.ipc = ipc
 
         self.default_prefix = "."
-        self.data = data  # database
-        self.prefixes = self.data.load("prefixes")
+        self.data: Data = data  # database
+        self.config: ConfigManager = config  # config
+
+        self.prefixes = self.data.get_json(file="prefixes")
         intents = discord.Intents.default()
         intents.members = True
 
@@ -22,7 +25,7 @@ class BotClient(commands.Bot):
         self.core_cogs_path = "./core/commands"
         self.core_import_cogs_path = "core.commands"
         self.register_cogs()
-        self.permit = PermissionsDict(self.data)
+        self.permit = PermissionsDict(self.data, self.config)
         self.parser = MessageParser()
 
         self.bot_owner = self.permit.bot_owner
@@ -92,11 +95,11 @@ class BotClient(commands.Bot):
         for g in self.guilds:
             if str(g.id) not in self.prefixes:
                 self.prefixes[str(g.id)] = self.default_prefix
-        self.data.save(self.prefixes, "prefixes")
+        self.data.set_json(file="prefixes", data=self.prefixes)
 
     def change_prefix(self, prefix, guild_id):
         self.prefixes[str(guild_id)] = prefix
-        self.data.save(self.prefixes, "prefixes")
+        self.data.set_json(file="prefixes", data=self.prefixes)
 
     def register_cogs(self):
         for filename in os.listdir(self.core_cogs_path):

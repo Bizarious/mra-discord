@@ -1,7 +1,7 @@
 import sys
 from core.bot import BotClient
 from core.system.system_commands import restart
-from core.database import Data
+from core.database import Data, ConfigManager
 from core.system import IPC
 from core.task import TaskManager
 
@@ -9,6 +9,7 @@ from core.task import TaskManager
 class Main:
 
     def __init__(self):
+        self.global_config = ConfigManager()
         self.data = Data()
         self.bot_token = ""
         self.greetings()
@@ -16,7 +17,7 @@ class Main:
         self.ipc = IPC()
         self.ipc.create_queues("bot", "task")
 
-        self.bot = BotClient(self.data, self.ipc)
+        self.bot = BotClient(self.data, self.global_config, self.ipc)
         self.task_manager = TaskManager(self.data, self.ipc)
 
     def run(self):
@@ -30,18 +31,15 @@ class Main:
             restart(sys.argv)
 
     def greetings(self):
-        tokens: dict = self.data.load("tokens")
-        if "bot" not in tokens.keys():
-            bot_token = input("Bot Token: ")
-            tokens["bot"] = bot_token
-            self.data.save(tokens, "tokens")
-        self.bot_token = tokens["bot"]
+        self.bot_token = self.global_config.get_token("bot")
+        if self.bot_token is None:
+            self.bot_token = input("\nBot Token: ")
+            self.global_config.set_token("bot", self.bot_token)
 
-        permissions: dict = self.data.load("permissions")
-        if "bot_owner" not in permissions.keys():
-            bot_owner = int(input("Bot Owner ID: "))
-            permissions["bot_owner"] = bot_owner
-            self.data.save(permissions, "permissions")
+        bot_owner = self.global_config.get_config("bot_owner")
+        if bot_owner is None:
+            bot_owner = input("\nBot Owner ID: ")
+            self.global_config.set_default_config("bot_owner", bot_owner)
 
 
 if __name__ == "__main__":

@@ -1,16 +1,17 @@
 from discord.ext import commands
+from core.database import Data, ConfigManager
 
 
 class PermissionsDict:
 
-    def __init__(self, data):
-        self.permission_needed = ["bot_owner",
-                                  "ignored_users",
+    def __init__(self, data, config):
+        self.permission_needed = ["ignored_users",
                                   "ignored_guilds",
                                   "ignored_channels",
                                   "blacklist"]
-        self.data = data
-        self.permissions = self.data.load("permissions")
+        self.data: Data = data
+        self.config: ConfigManager = config
+        self.permissions = self.data.get_json(file="permissions")
         self.first_startup()
 
     def first_startup(self):
@@ -20,11 +21,11 @@ class PermissionsDict:
                 changed = True
                 self.permissions[s] = []
         if changed:
-            self.data.save(self.permissions, "permissions")
+            self.data.set_json(file="permissions", data=self.permissions)
 
     @property
     def bot_owner(self):
-        return self.permissions["bot_owner"]
+        return int(self.config.get_config("bot_owner"))
 
     @property
     def ignored_users(self):
@@ -45,12 +46,12 @@ class PermissionsDict:
     def add_ignore(self, subject, subject_id):
         real_subject = f"ignored_{subject}"
         self.permissions[real_subject].append(subject_id)
-        self.data.save(self.permissions, "permissions")
+        self.data.set_json(file="permissions", data=self.permissions)
 
     def remove_ignore(self, subject, subject_id):
         real_subject = f"ignored_{subject}"
         self.permissions[real_subject].remove(subject_id)
-        self.data.save(self.permissions, "permissions")
+        self.data.set_json(file="permissions", data=self.permissions)
 
     def check_ignored(self, message):
         a_id = message.author.id

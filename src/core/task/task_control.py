@@ -10,6 +10,7 @@ from core.system import IPC
 import time
 from core.enums import Dates
 from .task_exceptions import UserHasNoTasksException, TaskIdDoesNotExistException, TaskCreationError
+from core.database import Data
 
 
 def task(name):
@@ -57,7 +58,7 @@ class TaskManager(Process):
 
         self.core_tasks_path = "./core/tasks"
         self.core_import_tasks_path = "core.tasks"
-        self.data = data
+        self.data: Data = data
 
         self.tasks = {}  # author mapping
         self.task_dict = {}  # task classes
@@ -65,7 +66,7 @@ class TaskManager(Process):
         self.next_date = None
 
         self.register_all_tasks()
-        self.import_tasks(self.data.load("tasks"))
+        self.import_tasks(self.data.get_json(file="tasks"))
 
     def register_task(self, module_path: str, file: str):
         task_module = importlib.import_module(f'{module_path}.{file}')
@@ -111,6 +112,7 @@ class TaskManager(Process):
         tsk.kwargs = pkt.kwargs
         self.task_queue.put((tsk.next_time, tsk.creation_time, tsk))  # task is added to queue
         self.tasks[pkt.author_id].append(tsk)  # task is appended to author list
+        self.data.set_json(file="tasks", data=self.export_tasks())
 
     def add_task_from_dict(self, tsk_dict: dict):
         if dt.now() > dt.strptime(tsk_dict["extra"]["next_time"], Dates.DATE_FORMAT.value) and \
@@ -131,6 +133,7 @@ class TaskManager(Process):
     def delete_task_from_mapping(self, tsk: tk.TimeBasedTask):
         author_id = tsk.author_id
         self.tasks[author_id].remove(tsk)
+        self.data.set_json(file="tasks", data=self.export_tasks())
 
     def delete_task_from_queue(self, tsk: tk.TimeBasedTask):
         for t in self.task_queue.queue:
@@ -225,7 +228,6 @@ class TaskManager(Process):
         t: Thread
         for t in self.running_tasks:
             t.join()
-        self.data.save(self.export_tasks(), "tasks")
 
     def run(self):
         try:
@@ -239,4 +241,3 @@ class TaskManager(Process):
                 time.sleep(0.2)
         except KeyboardInterrupt:
             self.stop()
-
