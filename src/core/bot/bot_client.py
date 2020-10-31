@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands, tasks
-from core.permissions import PermissionsDict
+from core.permissions import Permissions
 from core.database import Data, ConfigManager
 from core.system import IPC
 from .message_parser import MessageParser
@@ -23,7 +23,7 @@ class BotClient(commands.Bot):
 
         self.core_cogs_path = "./core/commands"
         self.core_import_cogs_path = "core.commands"
-        self.permit = PermissionsDict(self.data, self.config)
+        self.permit = Permissions(self.data, self.config)
         self.register_cog_handler()
         self.parser = MessageParser()
 

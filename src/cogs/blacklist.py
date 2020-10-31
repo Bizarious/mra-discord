@@ -1,16 +1,76 @@
 from discord.ext import commands
 from core.permissions import owner
 from tabulate import tabulate as tab
+from core.database import Data, ConfigManager
 
 
-class Permissions(commands.Cog):
+class BlackList(commands.Cog):
 
     on_message_id = 0
 
     def __init__(self, bot):
         self.bot = bot
-        self.permit = self.bot.permit
         self.bot.add_limit(self.check_permit, self.on_message_id)
+        self.permission_needed = ["ignored_users",
+                                  "ignored_guilds",
+                                  "ignored_channels",
+                                  "blacklist"]
+        self.data: Data = self.bot.data
+        self.config: ConfigManager = self.bot.config
+        self.permissions = self.data.get_json(file="blacklist")
+        self.first_startup()
+
+    def first_startup(self):
+        changed = False
+        for s in self.permission_needed:
+            if s not in self.permissions.keys():
+                changed = True
+                self.permissions[s] = []
+        if changed:
+            self.data.set_json(file="blacklist", data=self.permissions)
+
+    @property
+    def bot_owner(self):
+        return int(self.config.get_config("bot_owner"))
+
+    @property
+    def ignored_users(self):
+        return self.permissions["ignored_users"]
+
+    @property
+    def ignored_guilds(self):
+        return self.permissions["ignored_guilds"]
+
+    @property
+    def ignored_channels(self):
+        return self.permissions["ignored_channels"]
+
+    @property
+    def blacklist(self):
+        return self.permissions["blacklist"]
+
+    def add_ignore(self, subject, subject_id):
+        real_subject = f"ignored_{subject}"
+        self.permissions[real_subject].append(subject_id)
+        self.data.set_json(file="blacklist", data=self.permissions)
+
+    def remove_ignore(self, subject, subject_id):
+        real_subject = f"ignored_{subject}"
+        self.permissions[real_subject].remove(subject_id)
+        self.data.set_json(file="blacklist", data=self.permissions)
+
+    def check_ignored(self, message):
+        a_id = message.author.id
+        c = message.channel
+        g = message.guild
+        if self.bot_owner == a_id:
+            return True
+        if a_id not in self.ignored_users:
+            if g is not None:
+                if g.id not in self.ignored_guilds and \
+                        c.id not in self.ignored_channels:
+                    return True
+        return False
 
     @commands.command()
     @owner()
@@ -25,9 +85,9 @@ class Permissions(commands.Cog):
             if guild is None:
                 raise RuntimeError("Server does not exist.")
             guild_id = guild.id
-            if guild_id in self.bot.permit.ignored_guilds:
+            if guild_id in self.ignored_guilds:
                 raise RuntimeError("Server is already ignored.")
-            self.bot.permit.add_ignore("guilds", guild_id)
+            self.add_ignore("guilds", guild_id)
             await ctx.send(f'Added "{guild.name}" to ignore list. '
                            f'None of the commands from this server will be executed anymore.')
 
@@ -36,9 +96,9 @@ class Permissions(commands.Cog):
             if channel is None:
                 raise RuntimeError("Channel does not exist.")
             channel_id = channel.id
-            if channel_id in self.bot.permit.ignored_channels:
+            if channel_id in self.ignored_channels:
                 raise RuntimeError("Channel is already ignored.")
-            self.bot.permit.add_ignore("channels", channel_id)
+            self.add_ignore("channels", channel_id)
             await ctx.send(f'Added "{channel.name}" in "{channel.guild.name}" to ignore list. '
                            f'None of the commands from this channel will be executed anymore.')
 
@@ -47,9 +107,9 @@ class Permissions(commands.Cog):
             if user is None:
                 raise RuntimeError("User does not exist.")
             user_id = user.id
-            if user_id in self.bot.permit.ignored_users:
+            if user_id in self.ignored_users:
                 raise RuntimeError("User is already ignored.")
-            self.bot.permit.add_ignore("users", user_id)
+            self.add_ignore("users", user_id)
             await ctx.send(f'Added "{user.name}" to ignore list. '
                            f'None of the commands from this user will be executed anymore.')
 
@@ -69,9 +129,9 @@ class Permissions(commands.Cog):
             if guild is None:
                 raise RuntimeError("Server does not exist.")
             guild_id = guild.id
-            if guild_id not in self.bot.permit.ignored_guilds:
+            if guild_id not in self.ignored_guilds:
                 raise RuntimeError("Server is not in the ignore list.")
-            self.bot.permit.remove_ignore("guilds", guild_id)
+            self.remove_ignore("guilds", guild_id)
             await ctx.send(f'Removed "{guild.name}" from ignore list. '
                            f'Commands from this server are executed again.')
 
@@ -80,9 +140,9 @@ class Permissions(commands.Cog):
             if channel is None:
                 raise RuntimeError("Channel does not exist.")
             channel_id = channel.id
-            if channel_id not in self.bot.permit.ignored_channels:
+            if channel_id not in self.ignored_channels:
                 raise RuntimeError("Channel is not in the ignore list.")
-            self.bot.permit.remove_ignore("channels", channel_id)
+            self.remove_ignore("channels", channel_id)
             await ctx.send(f'Removed "{channel.name}" in "{channel.guild.name}" from ignore list. '
                            f'Commands from this channel are executed again.')
 
@@ -91,9 +151,9 @@ class Permissions(commands.Cog):
             if user is None:
                 raise RuntimeError("User does not exist.")
             user_id = user.id
-            if user_id not in self.bot.permit.ignored_users:
+            if user_id not in self.ignored_users:
                 raise RuntimeError("User is not in the ignore list.")
-            self.bot.permit.remove_ignore("users", user_id)
+            self.remove_ignore("users", user_id)
             await ctx.send(f'Removed "{user.name}" from ignore list. '
                            f'Commands from this user are executed again.')
 
@@ -110,17 +170,17 @@ class Permissions(commands.Cog):
         channel_table = []
         guild_table = []
 
-        for u in self.bot.permit.ignored_users:
+        for u in self.ignored_users:
             user = self.bot.get_user(u)
             user_table.append([user.id,
                                user.name,
                                user.discriminator])
-        for c in self.bot.permit.ignored_channels:
+        for c in self.ignored_channels:
             channel = self.bot.get_channel(c)
             channel_table.append([channel.id,
                                   channel.name,
                                   channel.guild.name])
-        for g in self.bot.permit.ignored_guilds:
+        for g in self.ignored_guilds:
             guild = self.bot.get_guild(g)
             guild_table.append([guild.id,
                                 guild.name])
@@ -138,13 +198,13 @@ class Permissions(commands.Cog):
         await ctx.send(message)
 
     def check_permit(self, message):
-        if self.permit.check_ignored(message):
+        if self.check_ignored(message):
             return True
 
 
 def setup(bot):
-    bot.add_cog(Permissions(bot))
+    bot.add_cog(BlackList(bot))
 
 
 def teardown(bot):
-    bot.remove_limit(Permissions.on_message_id)
+    bot.remove_limit(BlackList.on_message_id)
