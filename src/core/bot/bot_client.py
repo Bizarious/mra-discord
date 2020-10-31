@@ -79,7 +79,10 @@ class BotClient(commands.Bot):
             if isinstance(exception, commands.errors.CheckFailure):
                 await ctx.send("No Permissions")
             elif isinstance(exception, commands.CommandInvokeError):
-                await ctx.send(exception.original)
+                if isinstance(exception.original, discord.Forbidden):
+                    await ctx.send("I am not allowed to do that")
+                else:
+                    await ctx.send(exception.original)
             else:
                 await ctx.send(exception)
         except discord.HTTPException:
