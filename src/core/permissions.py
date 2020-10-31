@@ -57,8 +57,8 @@ class PermissionsDict:
         a_id = message.author.id
         c = message.channel
         g = message.guild
-        if self.bot_owner == a_id:
-            return True
+        #if self.bot_owner == a_id:
+            #return True
         if a_id not in self.ignored_users:
             if g is not None:
                 if g.id not in self.ignored_guilds and \

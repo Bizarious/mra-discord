@@ -1,4 +1,3 @@
-import os
 import discord
 from discord.ext import commands, tasks
 from core.permissions import PermissionsDict
@@ -24,9 +23,11 @@ class BotClient(commands.Bot):
 
         self.core_cogs_path = "./core/commands"
         self.core_import_cogs_path = "core.commands"
-        self.register_cogs()
         self.permit = PermissionsDict(self.data, self.config)
+        self.register_cog_handler()
         self.parser = MessageParser()
+
+        self.limit_cmd_processing = []
 
         self.bot_owner = self.permit.bot_owner
 
@@ -64,7 +65,10 @@ class BotClient(commands.Bot):
         print("online")
 
     async def on_message(self, message):
-        if self.permit.check_ignored(message):
+        limits = []
+        for limit in self.limit_cmd_processing:
+            limits.append(limit[0](message))
+        if all(limits):
             await self.process_commands(message)
 
     async def on_guild_join(self, guild):
@@ -101,10 +105,16 @@ class BotClient(commands.Bot):
         self.prefixes[str(guild_id)] = prefix
         self.data.set_json(file="prefixes", data=self.prefixes)
 
-    def register_cogs(self):
-        for filename in os.listdir(self.core_cogs_path):
-            if filename.endswith('.py') and not filename.startswith('_'):
-                self.load_extension(f'{self.core_import_cogs_path}.{filename[:-3]}')
+    def register_cog_handler(self):
+        self.load_extension("core.commands.cog_handler")
+
+    def add_limit(self, fct, number):
+        self.limit_cmd_processing.append((fct, number))
+
+    def remove_limit(self, number):
+        for i in range(len(self.limit_cmd_processing)):
+            if self.limit_cmd_processing[i][1] == number:
+                self.limit_cmd_processing.remove(self.limit_cmd_processing[i])
 
     def get_guild_id(self, name):
         for g in self.guilds:
