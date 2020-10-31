@@ -4,8 +4,13 @@ from tabulate import tabulate as tab
 
 
 class Permissions(commands.Cog):
+
+    on_message_id = 0
+
     def __init__(self, bot):
         self.bot = bot
+        self.permit = self.bot.permit
+        self.bot.add_limit(self.check_permit, self.on_message_id)
 
     @commands.command()
     @owner()
@@ -132,6 +137,14 @@ class Permissions(commands.Cog):
 
         await ctx.send(message)
 
+    def check_permit(self, message):
+        if self.permit.check_ignored(message):
+            return True
+
 
 def setup(bot):
     bot.add_cog(Permissions(bot))
+
+
+def teardown(bot):
+    bot.remove_limit(Permissions.on_message_id)

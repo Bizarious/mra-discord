@@ -32,6 +32,28 @@ class Misc(commands.Cog):
                     await message.delete()
                     await asyncio.sleep(0.2)
 
+    @commands.command("rmdme")
+    async def remind_me(self, ctx, date_string, message, label=None, number=0):
+        try:
+            int(number)
+        except ValueError:
+            raise AttributeError(f"'{number}' is no valid number")
+        if label is None:
+            label = message
+        t = self.bot.ipc.pack(author_id=ctx.message.author.id,
+                              channel_id=ctx.message.channel.id,
+                              message=message,
+                              date_string=date_string,
+                              label=label,
+                              number=int(number)
+                              )
+        self.bot.ipc.send(dst="task",
+                          package=t, cmd="task",
+                          task="Reminder",
+                          author_id=ctx.message.author.id,
+                          channel_id=ctx.message.channel.id
+                          )
+
     @commands.command()
     async def version(self, ctx):
         await ctx.send(__version__)
