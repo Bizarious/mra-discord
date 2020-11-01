@@ -1,8 +1,11 @@
+import discord
+import platform as pf
 from discord import DMChannel
 from discord.ext import commands
 import random
 import asyncio
 from core.version import __version__
+from core.enums import Dates
 
 
 class Misc(commands.Cog):
@@ -76,8 +79,32 @@ class Misc(commands.Cog):
                           )
 
     @commands.command()
-    async def version(self, ctx):
-        await ctx.send(__version__)
+    async def info(self, ctx):
+        """
+        Displays general information and statistics about the bot.
+        """
+        py_version = pf.python_version()
+        dpy_version = discord.__version__
+        server_count = len(self.bot.guilds)
+        member_count = len(set(self.bot.get_all_members()))
+        system = pf.system()
+
+        start_date = self.bot.start_time.strftime(Dates.DATE_FORMAT.value)
+
+        embed = discord.Embed(color=discord.Colour.blue(),
+                              title=f"{self.bot.user.name} Statistics",
+                              description="\uFeFF")
+
+        embed.add_field(name="Bot Owner", value=f"<@{self.bot.bot_owner}>", inline=False)
+        embed.add_field(name="Bot Version", value=__version__, inline=False)
+        embed.add_field(name="Online since", value=start_date, inline=False)
+        embed.add_field(name="Python Version", value=py_version, inline=True)
+        embed.add_field(name="Discord.py Version", value=dpy_version, inline=True)
+        embed.add_field(name="OS", value=system, inline=True)
+        embed.add_field(name="Observable Users", value=str(member_count), inline=True)
+        embed.add_field(name="Observable Servers", value=str(server_count), inline=True)
+
+        await ctx.send(embed=embed)
 
     @commands.command()
     async def choose(self, ctx, amount=0):
@@ -103,7 +130,7 @@ class Misc(commands.Cog):
                             await ctx.send(c.members[i].mention + f': {amount_list.count(i)}')
                         return
 
-        await ctx.send("You are not in a voice-channel.")
+        await ctx.send("You are not in a voice channel.")
 
 
 def setup(bot):

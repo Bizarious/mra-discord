@@ -4,12 +4,15 @@ from core.permissions import Permissions
 from core.database import Data, ConfigManager
 from core.system import IPC
 from .message_parser import MessageParser
+from datetime import datetime as dt
 
 
 class BotClient(commands.Bot):
     def __init__(self, data, config, ipc: IPC):
 
         self.ipc = ipc
+
+        self.start_time: dt = dt.now()
 
         self.default_prefix = "."
         self.data: Data = data  # database
