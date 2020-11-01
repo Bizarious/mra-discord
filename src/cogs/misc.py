@@ -11,10 +11,20 @@ class Misc(commands.Cog):
 
     @commands.command()
     async def echo(self, ctx, *, content):
+        """
+        Echos the given text back to the channel.
+        """
         await ctx.send(content)
 
     @commands.command()
     async def clear(self, ctx, n=5, mode=None):
+        """
+        Clears a given amount of messages in the channel.
+
+        Mode:
+            Leave it clean, when you want to purge commands and bot messages only.
+            Write 'all' for deleting all messages, regardless of the author. This does not work with direct messages.
+        """
 
         def message_check(m):
             if m.author == self.bot.user or m.content.startswith(self.bot.prefixes[str(ctx.message.guild.id)]):
@@ -34,6 +44,17 @@ class Misc(commands.Cog):
 
     @commands.command("rmdme")
     async def remind_me(self, ctx, date_string, message, label=None, number=0):
+        """
+        Adds a reminder-task.
+
+        message:
+            The message to display.
+
+        label:
+            Sets a label for this task for easier recognition. If not specified the label will be the message.
+
+        Run 'help tasks' to get more information.
+        """
         try:
             int(number)
         except ValueError:

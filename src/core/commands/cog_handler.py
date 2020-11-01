@@ -48,7 +48,7 @@ class CogHandler(commands.Cog, name="Cog Handler"):
     @commands.command("listcogs")
     async def list_cogs(self, ctx):
         """
-        Lists all available cogs to load
+        Lists all available cogs to load.
         """
         s = self.get_available_cogs()
         if s == "":
@@ -61,7 +61,7 @@ class CogHandler(commands.Cog, name="Cog Handler"):
     @owner()
     async def load_cog(self, ctx, cog):
         """
-        Loads specified cog
+        Loads specified cog.
         """
         for f in os.listdir(self.base_cog_path):
             if cog == f[:-3] and f.endswith(".py"):
@@ -78,7 +78,7 @@ class CogHandler(commands.Cog, name="Cog Handler"):
     @owner()
     async def unload_cog(self, ctx, cog):
         """
-        Unloads specified cog
+        Unloads specified cog.
         """
         if cog in self.loaded_cogs:
             self.bot.unload_extension(f"{self.base_cog_import_path}.{cog}")
@@ -89,7 +89,7 @@ class CogHandler(commands.Cog, name="Cog Handler"):
     @owner()
     async def load_all_cogs(self, _):
         """
-        Loads all available cogs
+        Loads all available cogs.
         """
         for f in os.listdir(self.base_cog_path):
             if not f.startswith("__") and f.endswith(".py"):
@@ -104,7 +104,7 @@ class CogHandler(commands.Cog, name="Cog Handler"):
     @owner()
     async def unload_all_cogs(self, _):
         """
-        Unloads all cogs
+        Unloads all cogs.
         """
         for f in self.loaded_cogs:
             self.bot.unload_extension(f"{self.base_cog_import_path}.{f}")

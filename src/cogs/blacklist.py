@@ -75,6 +75,9 @@ class BlackList(commands.Cog):
     @commands.command()
     @owner()
     async def ignore(self, ctx, subject, subject_id):
+        """
+        Adds entity to the ignore list.
+        """
         try:
             int(subject_id)
         except ValueError:
@@ -119,6 +122,9 @@ class BlackList(commands.Cog):
     @commands.command()
     @owner()
     async def note(self, ctx, subject, subject_id):
+        """
+        Removes entities from the ignore list.
+        """
         try:
             int(subject_id)
         except ValueError:
@@ -163,6 +169,9 @@ class BlackList(commands.Cog):
     @commands.command()
     @owner()
     async def ignored(self, ctx):
+        """
+        Shows all ignored entities.
+        """
         user_headers = ["ID", "Name", "Discriminator"]
         channel_headers = ["ID", "Name", "Server"]
         guild_headers = ["ID", "Name"]

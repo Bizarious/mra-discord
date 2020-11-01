@@ -15,6 +15,13 @@ class System(commands.Cog):
     @commands.command(hidden=True)
     @owner()
     async def shutdown(self, _, date_string=None):
+        """
+        Shuts down the bot.
+
+        date_string:
+            Specifying this wil create a system task instead of shutting down the bot immediately.
+            Run 'help tasks' for further information.
+        """
         if date_string is None:
             await self.bot.shutdown()
         else:
@@ -24,6 +31,9 @@ class System(commands.Cog):
     @commands.command(hidden=True)
     @owner()
     async def restart(self, _):
+        """
+        Restarts the bot.
+        """
         self.bot.restart = True
         await self.bot.change_presence(status=discord.Status.offline)
         await self.bot.logout()
@@ -31,6 +41,9 @@ class System(commands.Cog):
     @commands.command(hidden=True)
     @owner()
     async def update(self, ctx):
+        """
+        Pulls changes from git.
+        """
         m = os.popen("git pull").read()
         if "Already up to date" in m:
             await ctx.send("Already up to date.")
@@ -40,6 +53,9 @@ class System(commands.Cog):
     @commands.command("prefix", hidden=True)
     @owner()
     async def change_prefix(self, ctx, prefix):
+        """
+        Changes command prefix fot the server.
+        """
         self.bot.change_prefix(prefix, ctx.message.guild.id)
         await ctx.send(f'Changed prefix for server "{self.bot.get_guild(ctx.message.guild.id).name}" to "{prefix}"')
 
@@ -47,7 +63,7 @@ class System(commands.Cog):
     @owner()
     async def config_change(self, ctx, cmd, conf="", value=""):
         """
-        Manages bot and command configurations
+        Manages bot and command configurations.
         """
         if cmd == "status":
             s = "```\nAll existent configs:\n\n"
