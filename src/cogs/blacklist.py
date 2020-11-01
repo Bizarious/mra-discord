@@ -31,7 +31,7 @@ class BlackList(commands.Cog):
 
     @property
     def bot_owner(self):
-        return int(self.config.get_config("bot_owner"))
+        return int(self.config.get_config("botOwner"))
 
     @property
     def ignored_users(self):

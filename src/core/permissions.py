@@ -10,7 +10,7 @@ class Permissions:
 
     @property
     def bot_owner(self):
-        return int(self.config.get_config("bot_owner"))
+        return int(self.config.get_config("botOwner"))
 
 
 def is_it_me(ctx, a_id):
