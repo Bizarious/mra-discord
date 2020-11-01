@@ -1,4 +1,3 @@
-import discord
 import os
 from discord.ext import commands
 from core.permissions import owner
@@ -25,18 +24,24 @@ class System(commands.Cog):
         if date_string is None:
             await self.bot.shutdown()
         else:
-            t = self.bot.ipc.pack(author_id=0, date_string=date_string)
+            t = self.bot.ipc.pack(author_id=0, date_string=date_string, mode="shutdown")
             self.bot.ipc.send(dst="task", package=t, cmd="task", task="Shutdown", author_id=0)
 
     @commands.command(hidden=True)
     @owner()
-    async def restart(self, _):
+    async def restart(self, _, date_string=None):
         """
         Restarts the bot.
+
+        date_string:
+            Specifying this wil create a system task instead of restarting the bot immediately.
+            Run 'help tasks' for further information.
         """
-        self.bot.restart = True
-        await self.bot.change_presence(status=discord.Status.offline)
-        await self.bot.logout()
+        if date_string is None:
+            await self.bot.do_restart()
+        else:
+            t = self.bot.ipc.pack(author_id=0, date_string=date_string, mode="restart")
+            self.bot.ipc.send(dst="task", package=t, cmd="task", task="Shutdown", author_id=0)
 
     @commands.command(hidden=True)
     @owner()

@@ -45,6 +45,8 @@ class BotClient(commands.Bot):
         if pkt is not None:
             if pkt.cmd == "shutdown":
                 await self.shutdown()
+            elif pkt.cmd == "restart":
+                await self.do_restart()
             elif pkt.cmd == "send":
                 ctx = self.parser.parse(pkt.message, self)
                 try:
@@ -94,7 +96,7 @@ class BotClient(commands.Bot):
         await self.change_presence(status=discord.Status.offline)
         await self.logout()
 
-    async def restart(self):
+    async def do_restart(self):
         self.restart = True
         await self.change_presence(status=discord.Status.offline)
         await self.logout()
