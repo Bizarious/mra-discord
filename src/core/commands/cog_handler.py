@@ -1,6 +1,7 @@
 import os
 from discord.ext import commands
 from core.permissions import owner
+from core.database import ConfigManager
 
 
 class CogHandler(commands.Cog, name="Cog Handler"):
@@ -14,14 +15,28 @@ class CogHandler(commands.Cog, name="Cog Handler"):
 
     def __init__(self, bot):
         self.bot = bot
-        self.config = self.bot.config
-        self.load_base_cogs()
+        self.config: ConfigManager = self.bot.config
+        self.config.set_default_config("loadCogs", "none")
         self.loaded_cogs = []
+
+        self.load_base_cogs()
+
+        self.load_cogs = self.config.get_config("loadCogs")
+        self.load_extra_cogs()
 
     def load_base_cogs(self):
         for f in os.listdir(self.base_path):
             if not f.startswith("__") and f != self.name and f.endswith(".py"):
                 self.bot.load_extension(f"{self.base_import_path}.{f[:-3]}")
+
+    def load_extra_cogs(self):
+        if self.load_cogs == "none":
+            return
+        for f in os.listdir(self.base_cog_path):
+            if not f.startswith("__") and \
+                    f.endswith(".py") and \
+                    (f[:-3] in self.load_cogs or "all" in self.load_cogs):
+                self.bot.load_extension(f"{self.base_cog_import_path}.{f[:-3]}")
 
     def get_available_cogs(self):
         s = ""

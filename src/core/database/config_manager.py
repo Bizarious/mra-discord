@@ -1,5 +1,7 @@
 import os
 from core.database import DataBasic
+from core.database.errors import ConfigNotExistentError
+from typing import Union
 
 
 class ConfigManager(DataBasic):
@@ -66,16 +68,19 @@ class ConfigManager(DataBasic):
         f.writelines(lines)
         f.close()
 
-    def get_config(self, name: str):
+    def get_config(self, name: str) -> Union[str, None]:
         if name in self.configs.keys():
             return self.configs[name]
         return None
 
     def set_config(self, name: str, value: str):
+        if name not in self.configs.keys():
+            raise ConfigNotExistentError("You cannot change a non existent config. "
+                                         "Run 'set_default_config to apply a default value'")
         self.configs[name] = value
         self._save_configs()
 
-    def get_token(self, name: str):
+    def get_token(self, name: str) -> Union[str, None]:
         if name in self.tokens.keys():
             return self.tokens[name]
         return None
@@ -96,4 +101,3 @@ if __name__ == "__main__":
     print(c.get_token("bot"))
     print(c.configs)
     print(c.tokens)
-

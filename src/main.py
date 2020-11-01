@@ -36,10 +36,10 @@ class Main:
             self.bot_token = input("\nBot Token: ")
             self.global_config.set_token("bot", self.bot_token)
 
-        bot_owner = self.global_config.get_config("bot_owner")
+        bot_owner = self.global_config.get_config("botOwner")
         if bot_owner is None:
             bot_owner = input("\nBot Owner ID: ")
-            self.global_config.set_default_config("bot_owner", bot_owner)
+            self.global_config.set_default_config("botOwner", bot_owner)
 
 
 if __name__ == "__main__":

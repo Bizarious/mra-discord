@@ -24,7 +24,6 @@ class BotClient(commands.Bot):
         self.core_cogs_path = "./core/commands"
         self.core_import_cogs_path = "core.commands"
         self.permit = Permissions(self.data, self.config)
-        self.register_cog_handler()
         self.parser = MessageParser()
 
         self.limit_cmd_processing = []
@@ -33,6 +32,8 @@ class BotClient(commands.Bot):
 
         # flags
         self.restart = False
+
+        self.register_cog_handler()
 
     # Loop
     @tasks.loop(seconds=0.2)
