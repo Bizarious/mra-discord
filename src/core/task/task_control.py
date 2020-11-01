@@ -56,8 +56,8 @@ class TaskManager(Process):
         self.running_tasks = []
         self.running_tasks_lock = Lock()
 
-        self.core_tasks_path = "./core/tasks"
-        self.core_import_tasks_path = "core.tasks"
+        self.core_tasks_path = "./tasks"
+        self.core_import_tasks_path = "tasks"
         self.data: Data = data
 
         self.tasks = {}  # author mapping
