@@ -88,6 +88,8 @@ class System(commands.Cog):
                 await ctx.send(f"The config '{conf}' does not exist.")
             else:
                 await ctx.send(f"Successfully changed '{conf}'. You may need to restart the bot.")
+        else:
+            await ctx.send(f"'{cmd}' is no valid argument.")
 
     @commands.command(hidden=True)
     @owner()
