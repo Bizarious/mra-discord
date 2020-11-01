@@ -94,6 +94,11 @@ class BotClient(commands.Bot):
         await self.change_presence(status=discord.Status.offline)
         await self.logout()
 
+    async def restart(self):
+        self.restart = True
+        await self.change_presence(status=discord.Status.offline)
+        await self.logout()
+
     async def get_prefix(self, message):
         if message.guild is None:
             return self.default_prefix
