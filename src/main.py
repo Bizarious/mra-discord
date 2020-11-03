@@ -28,7 +28,7 @@ class Main:
         self.task_manager.join()
 
         if self.bot.restart:
-            restart(sys.argv)
+            restart(sys.argv, int(self.global_config.get_config("restartTimer")))
 
     def greetings(self):
         self.bot_token = self.global_config.get_token("bot")
@@ -40,6 +40,8 @@ class Main:
         if bot_owner is None:
             bot_owner = input("\nBot Owner ID: ")
             self.global_config.set_default_config("botOwner", bot_owner)
+
+        self.global_config.set_default_config("restartTimer", "2")
 
 
 if __name__ == "__main__":
