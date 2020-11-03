@@ -73,9 +73,11 @@ class Tasks(commands.Cog):
         General help for task creating.
 
         date_string:
+
             Possibility 1:
                 Can be of the form 'xh', 'xm', 'xs' or every combination of them, with x being a
                 number and h, m and s being hours, minutes and seconds respectively.
+
             Possibility 2: Can be a cronjob like string of the form "* * * * *", with the stars being
                 minutes, hours, days, months and weekdays respectively.
 
