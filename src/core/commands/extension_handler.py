@@ -2,16 +2,17 @@ import os
 from discord.ext import commands
 from core.permissions import owner
 from core.database import ConfigManager
+from tabulate import tabulate as tab
 
 
-class CogHandler(commands.Cog, name="Cog Handler"):
+class ExtensionHandler(commands.Cog, name="Cog Handler"):
 
     base_path = "./core/commands"
     base_import_path = "core.commands"
 
-    base_cog_path = "./cogs"
-    base_cog_import_path = "cogs"
-    name = "cog_handler.py"
+    base_ext_path = "./extensions"
+    base_ext_import_path = "extensions"
+    name = "extension_handler.py"
 
     def __init__(self, bot):
         self.bot = bot
@@ -19,54 +20,77 @@ class CogHandler(commands.Cog, name="Cog Handler"):
         self.config.set_default_config("loadCogs", "none")
         self.loaded_cogs = []
 
-        self.load_base_cogs()
+        self.load_base_ext()
 
         self.load_cogs = self.config.get_config("loadCogs")
-        self.load_extra_cogs()
+        self.load_extra_ext()
 
-    def load_base_cogs(self):
+    def load_base_ext(self):
         for f in os.listdir(self.base_path):
             if not f.startswith("__") and f != self.name and f.endswith(".py"):
                 self.bot.load_extension(f"{self.base_import_path}.{f[:-3]}")
 
-    def load_extra_cogs(self):
+    def load_extra_ext(self):
         if self.load_cogs == "none":
             return
-        for f in os.listdir(self.base_cog_path):
+        for f in os.listdir(self.base_ext_path):
             if not f.startswith("__") and \
                     f.endswith(".py") and \
                     (f[:-3] in self.load_cogs or "all" in self.load_cogs):
-                self.bot.load_extension(f"{self.base_cog_import_path}.{f[:-3]}")
+                self.bot.load_extension(f"{self.base_ext_import_path}.{f[:-3]}")
+                self.loaded_cogs.append(f[:-3])
 
-    def get_available_cogs(self):
-        s = ""
-        for f in os.listdir(self.base_cog_path):
+    def get_available_ext(self):
+        s = []
+        for f in os.listdir(self.base_ext_path):
             if not f.startswith("__"):
-                s += f"{f[:-3]}\n"
+                s.append(f[:-3])
         return s
 
-    @commands.command("listcogs")
-    async def list_cogs(self, ctx):
+    @commands.command("listexts")
+    async def list_extensions(self, ctx):
         """
-        Lists all available cogs to load.
+        Lists all available extensions to load.
         """
-        s = self.get_available_cogs()
-        if s == "":
-            result = "No cogs found."
+        s: list = self.get_available_ext()
+        if len(s) == 0:
+            result = "No extensions found."
         else:
-            result = f"```\n{s}\n```"
+            headers = ["Available", "Loaded"]
+            table = []
+
+            loaded = []
+            for i in s:
+                if i in self.loaded_cogs:
+                    loaded.append(i)
+            s = [e for e in s if e not in loaded]
+
+            length = len(s) - len(loaded)
+            if length > 0:
+                for i in range(length):
+                    loaded.append("")
+            elif length < 0:
+                length = length * -1
+                for i in range(length):
+                    s.append("")
+
+            for i in range(len(s)):
+                table.append([s[i], loaded[i]])
+
+            result = f"```{tab(table, headers=headers)}```"
+
         await ctx.send(result)
 
-    @commands.command("loadcog")
+    @commands.command("load")
     @owner()
-    async def load_cog(self, ctx, cog):
+    async def load_ext(self, ctx, cog):
         """
-        Loads specified cog.
+        Loads specified extension.
         """
-        for f in os.listdir(self.base_cog_path):
+        for f in os.listdir(self.base_ext_path):
             if cog == f[:-3] and f.endswith(".py"):
                 try:
-                    self.bot.load_extension(f"{self.base_cog_import_path}.{cog}")
+                    self.bot.load_extension(f"{self.base_ext_import_path}.{cog}")
                 except commands.ExtensionAlreadyLoaded:
                     await ctx.send("Cog is already loaded")
                     return
@@ -74,27 +98,28 @@ class CogHandler(commands.Cog, name="Cog Handler"):
                 return
         await ctx.send("Cog not found")
 
-    @commands.command("unloadcog")
+    @commands.command("unload")
     @owner()
-    async def unload_cog(self, ctx, cog):
+    async def unload_ext(self, ctx, cog):
         """
-        Unloads specified cog.
+        Unloads specified extension.
         """
         if cog in self.loaded_cogs:
-            self.bot.unload_extension(f"{self.base_cog_import_path}.{cog}")
+            self.bot.unload_extension(f"{self.base_ext_import_path}.{cog}")
+            self.loaded_cogs.remove(cog)
             return
         await ctx.send("Cog is not loaded")
 
     @commands.command("loadall")
     @owner()
-    async def load_all_cogs(self, _):
+    async def load_all_ext(self, _):
         """
-        Loads all available cogs.
+        Loads all available extensions.
         """
-        for f in os.listdir(self.base_cog_path):
+        for f in os.listdir(self.base_ext_path):
             if not f.startswith("__") and f.endswith(".py"):
                 try:
-                    self.bot.load_extension(f"{self.base_cog_import_path}.{f[:-3]}")
+                    self.bot.load_extension(f"{self.base_ext_import_path}.{f[:-3]}")
                     if f[:-3] not in self.loaded_cogs:
                         self.loaded_cogs.append(f[:-3])
                 except commands.ExtensionAlreadyLoaded:
@@ -102,13 +127,14 @@ class CogHandler(commands.Cog, name="Cog Handler"):
 
     @commands.command("unloadall")
     @owner()
-    async def unload_all_cogs(self, _):
+    async def unload_all_ext(self, _):
         """
-        Unloads all cogs.
+        Unloads all extensions.
         """
         for f in self.loaded_cogs:
-            self.bot.unload_extension(f"{self.base_cog_import_path}.{f}")
+            self.bot.unload_extension(f"{self.base_ext_import_path}.{f}")
+        self.loaded_cogs = []
 
 
 def setup(bot):
-    bot.add_cog(CogHandler(bot))
+    bot.add_cog(ExtensionHandler(bot))
