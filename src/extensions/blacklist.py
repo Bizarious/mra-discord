@@ -6,11 +6,8 @@ from core.database import Data, ConfigManager
 
 class BlackList(commands.Cog):
 
-    on_message_id = 0
-
     def __init__(self, bot):
         self.bot = bot
-        self.bot.add_limit(self.check_permit, self.on_message_id)
         self.permission_needed = ["ignored_users",
                                   "ignored_guilds",
                                   "ignored_channels",
@@ -206,14 +203,9 @@ class BlackList(commands.Cog):
 
         await ctx.send(message)
 
-    def check_permit(self, message):
-        if self.check_ignored(message):
-            return True
+    def on_message_check(self, message):
+        return self.check_ignored(message)
 
 
 def setup(bot):
     bot.add_cog(BlackList(bot))
-
-
-def teardown(bot):
-    bot.remove_limit(BlackList.on_message_id)

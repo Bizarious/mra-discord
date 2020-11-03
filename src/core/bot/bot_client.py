@@ -120,15 +120,24 @@ class BotClient(commands.Bot):
         self.data.set_json(file="prefixes", data=self.prefixes)
 
     def register_cog_handler(self):
-        self.load_extension("core.commands.cog_handler")
+        self.load_extension("core.commands.extension_handler")
 
-    def add_limit(self, fct, number):
-        self.limit_cmd_processing.append((fct, number))
+    def add_limit(self, fct, name):
+        self.limit_cmd_processing.append((fct, name))
 
-    def remove_limit(self, number):
+    def remove_limit(self, name):
         for i in range(len(self.limit_cmd_processing)):
-            if self.limit_cmd_processing[i][1] == number:
+            if self.limit_cmd_processing[i][1] == name:
                 self.limit_cmd_processing.remove(self.limit_cmd_processing[i])
+
+    def add_cog(self, cog):
+        commands.Bot.add_cog(self, cog)
+        if hasattr(cog, "on_message_check"):
+            self.add_limit(cog.on_message_check, cog.__cog_name__)
+
+    def remove_cog(self, name):
+        self.remove_limit(name)
+        commands.Bot.remove_cog(self, name)
 
     def get_guild_id(self, name):
         for g in self.guilds:
