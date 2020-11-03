@@ -103,6 +103,15 @@ class System(commands.Cog):
             await ctx.send("This command is not available on this system.")
         else:
             await ctx.send(f'{temp} °C')
+
+    async def parse_commands(self, pkt):
+        if pkt.cmd == "shutdown":
+            await self.bot.shutdown()
+            return False
+        elif pkt.cmd == "restart":
+            await self.bot.do_restart()
+            return False
+        return True
         
 
 def setup(bot):
