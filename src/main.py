@@ -29,6 +29,8 @@ class Main:
 
         if self.bot.restart:
             restart(sys.argv, int(self.global_config.get_config("restartTimer")))
+        else:
+            print("shutdown")
 
     def greetings(self):
         self.bot_token = self.global_config.get_token("bot")

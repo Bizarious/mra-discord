@@ -8,6 +8,7 @@ def measure_temp():
 
 
 def restart(args, t: int):
+    print("restart")
     time.sleep(t)
     os.system("clear")
     os.execv(sys.executable, [sys.executable.split("/")[-1]] + args)
