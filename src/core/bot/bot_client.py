@@ -30,6 +30,7 @@ class BotClient(commands.Bot):
         self.parser = MessageParser()
 
         self.limit_cmd_processing = []
+        self.cmd_parsers = []
 
         self.bot_owner = self.permit.bot_owner
 
@@ -46,11 +47,7 @@ class BotClient(commands.Bot):
 
     async def parse_commands(self, pkt):
         if pkt is not None:
-            if pkt.cmd == "shutdown":
-                await self.shutdown()
-            elif pkt.cmd == "restart":
-                await self.do_restart()
-            elif pkt.cmd == "send":
+            if pkt.cmd == "send":
                 ctx = self.parser.parse(pkt.message, self)
                 try:
                     if ctx.privacy == "public" and hasattr(pkt, "channel_id"):
@@ -62,6 +59,11 @@ class BotClient(commands.Bot):
                         await self.get_user(pkt.author_id).send(ctx.message)
                 except Exception as e:
                     print(e)
+            else:
+                for i in self.cmd_parsers:
+                    result = await i[0](pkt)
+                    if not result:
+                        return
 
     # Events
     async def on_ready(self):
@@ -130,13 +132,24 @@ class BotClient(commands.Bot):
             if self.limit_cmd_processing[i][1] == name:
                 self.limit_cmd_processing.remove(self.limit_cmd_processing[i])
 
+    def add_command_parser(self, fct, name):
+        self.cmd_parsers.append((fct, name))
+
+    def remove_command_parser(self, name):
+        for i in range(len(self.cmd_parsers)):
+            if self.cmd_parsers[i][1] == name:
+                self.cmd_parsers.remove(self.limit_cmd_processing[i])
+
     def add_cog(self, cog):
         commands.Bot.add_cog(self, cog)
         if hasattr(cog, "on_message_check"):
             self.add_limit(cog.on_message_check, cog.__cog_name__)
+        if hasattr(cog, "parse_commands"):
+            self.add_command_parser(cog.parse_commands, cog.__cog_name__)
 
     def remove_cog(self, name):
         self.remove_limit(name)
+        self.remove_command_parser(name)
         commands.Bot.remove_cog(self, name)
 
     def get_guild_id(self, name):
