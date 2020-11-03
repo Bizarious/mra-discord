@@ -10,20 +10,34 @@ class ExtensionHandler(commands.Cog, name="Cog Handler"):
     base_path = "./core/commands"
     base_import_path = "core.commands"
 
-    base_ext_path = "./extensions"
-    base_ext_import_path = "extensions"
     name = "extension_handler.py"
 
     def __init__(self, bot):
         self.bot = bot
         self.config: ConfigManager = self.bot.config
         self.config.set_default_config("loadCogs", "none")
-        self.loaded_cogs = []
+        self.paths = {"./extensions": "extensions"}
+        self.loaded_cogs = {}
 
         self.load_base_ext()
 
         self.load_cogs = self.config.get_config("loadCogs")
         self.load_extra_ext()
+
+    def list_all_extensions(self) -> dict:
+        paths = {}
+        for path in self.paths.keys():
+            if os.path.exists(path):
+                for f in os.listdir(path):
+                    paths[f] = f"{self.paths[path]}.{f[:-3]}"
+        return paths
+
+    def get_ext(self, name):
+        paths = self.list_all_extensions()
+        for f in paths.keys():
+            if f[:-3] == name and f.endswith(".py") and not f.startswith("__"):
+                return paths[f]
+        return None
 
     def load_base_ext(self):
         for f in os.listdir(self.base_path):
@@ -33,16 +47,18 @@ class ExtensionHandler(commands.Cog, name="Cog Handler"):
     def load_extra_ext(self):
         if self.load_cogs == "none":
             return
-        for f in os.listdir(self.base_ext_path):
+        paths = self.list_all_extensions()
+        for f in paths.keys():
             if not f.startswith("__") and \
                     f.endswith(".py") and \
                     (f[:-3] in self.load_cogs or "all" in self.load_cogs):
-                self.bot.load_extension(f"{self.base_ext_import_path}.{f[:-3]}")
-                self.loaded_cogs.append(f[:-3])
+                self.bot.load_extension(paths[f])
+                self.loaded_cogs[f[:-3]] = paths[f]
 
     def get_available_ext(self):
         s = []
-        for f in os.listdir(self.base_ext_path):
+        paths = self.list_all_extensions()
+        for f in paths.keys():
             if not f.startswith("__"):
                 s.append(f[:-3])
         return s
@@ -61,7 +77,7 @@ class ExtensionHandler(commands.Cog, name="Cog Handler"):
 
             loaded = []
             for i in s:
-                if i in self.loaded_cogs:
+                if i in self.loaded_cogs.keys():
                     loaded.append(i)
             s = [e for e in s if e not in loaded]
 
@@ -87,16 +103,16 @@ class ExtensionHandler(commands.Cog, name="Cog Handler"):
         """
         Loads specified extension.
         """
-        for f in os.listdir(self.base_ext_path):
-            if cog == f[:-3] and f.endswith(".py"):
-                try:
-                    self.bot.load_extension(f"{self.base_ext_import_path}.{cog}")
-                except commands.ExtensionAlreadyLoaded:
-                    await ctx.send("Cog is already loaded")
-                    return
-                self.loaded_cogs.append(cog)
-                return
-        await ctx.send("Cog not found")
+        cog_path = self.get_ext(cog)
+        if cog_path is None:
+            await ctx.send("Cog not found")
+            return
+        try:
+            self.bot.load_extension(cog_path)
+        except commands.ExtensionAlreadyLoaded:
+            await ctx.send("Cog is already loaded")
+            return
+        self.loaded_cogs[cog] = cog_path
 
     @commands.command("unload")
     @owner()
@@ -105,10 +121,30 @@ class ExtensionHandler(commands.Cog, name="Cog Handler"):
         Unloads specified extension.
         """
         if cog in self.loaded_cogs:
-            self.bot.unload_extension(f"{self.base_ext_import_path}.{cog}")
-            self.loaded_cogs.remove(cog)
+            self.bot.unload_extension(self.loaded_cogs[cog])
+            del self.loaded_cogs[cog]
             return
         await ctx.send("Cog is not loaded")
+
+    @commands.command("reload")
+    @owner()
+    async def reload_ext(self, ctx, cog):
+        """
+        Reloads specific extension.
+        """
+        if cog in self.loaded_cogs:
+            self.bot.reload_extension(self.loaded_cogs[cog])
+            return
+        await ctx.send("Cog is not loaded")
+
+    @commands.command("reloadall")
+    @owner()
+    async def reload_all_ext(self, _):
+        """
+        Reloads all loaded extensions.
+        """
+        for c in self.loaded_cogs.keys():
+            self.bot.reload_extension(self.loaded_cogs[c])
 
     @commands.command("loadall")
     @owner()
@@ -116,12 +152,13 @@ class ExtensionHandler(commands.Cog, name="Cog Handler"):
         """
         Loads all available extensions.
         """
-        for f in os.listdir(self.base_ext_path):
+        paths = self.list_all_extensions()
+        for f in paths.keys():
             if not f.startswith("__") and f.endswith(".py"):
                 try:
-                    self.bot.load_extension(f"{self.base_ext_import_path}.{f[:-3]}")
+                    self.bot.load_extension(paths[f])
                     if f[:-3] not in self.loaded_cogs:
-                        self.loaded_cogs.append(f[:-3])
+                        self.loaded_cogs[f[:-3]] = paths[f]
                 except commands.ExtensionAlreadyLoaded:
                     pass
 
@@ -131,9 +168,9 @@ class ExtensionHandler(commands.Cog, name="Cog Handler"):
         """
         Unloads all extensions.
         """
-        for f in self.loaded_cogs:
-            self.bot.unload_extension(f"{self.base_ext_import_path}.{f}")
-        self.loaded_cogs = []
+        for c in self.loaded_cogs:
+            self.bot.unload_extension(self.loaded_cogs[c])
+        self.loaded_cogs = {}
 
 
 def setup(bot):
