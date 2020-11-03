@@ -11,6 +11,7 @@ class BlackList(commands.Cog):
         self.permission_needed = ["ignored_users",
                                   "ignored_guilds",
                                   "ignored_channels",
+                                  "ignored_dms",
                                   "blacklist"]
         self.data: Data = self.bot.data
         self.config: ConfigManager = self.bot.config
@@ -43,6 +44,10 @@ class BlackList(commands.Cog):
         return self.permissions["ignored_channels"]
 
     @property
+    def ignored_dms(self):
+        return self.permissions["ignored_dms"]
+
+    @property
     def blacklist(self):
         return self.permissions["blacklist"]
 
@@ -53,7 +58,12 @@ class BlackList(commands.Cog):
 
     def remove_ignore(self, subject, subject_id):
         real_subject = f"ignored_{subject}"
-        self.permissions[real_subject].remove(subject_id)
+        if subject_id == "every":
+            if real_subject not in self.permissions.keys():
+                raise KeyError(real_subject)
+            self.permissions[real_subject] = []
+        else:
+            self.permissions[real_subject].remove(subject_id)
         self.data.set_json(file="blacklist", data=self.permissions)
 
     def check_ignored(self, message):
@@ -62,23 +72,53 @@ class BlackList(commands.Cog):
         g = message.guild
         if self.bot_owner == a_id:
             return True
-        if a_id not in self.ignored_users:
+        if a_id not in self.ignored_users and "all" not in self.ignored_users:
             if g is not None:
                 if g.id not in self.ignored_guilds and \
-                        c.id not in self.ignored_channels:
+                        c.id not in self.ignored_channels and \
+                        "all" not in self.ignored_guilds and \
+                        "all" not in self.ignored_channels:
                     return True
+            else:
+                if "all" in self.ignored_dms:
+                    return False
+                return True
         return False
 
     @commands.command()
     @owner()
     async def ignore(self, ctx, subject, subject_id):
         """
-        Adds entity to the ignore list.
+        Adds an subject to the ignore list.
+
+        subject:
+
+            guild
+            channel
+            user
+            all:
+                Ignores all subjects of the given type.
+
+
+        subject_id:
+
+            The id of the subject.
+
+            When using 'all' as subject, this can be:
+                guilds
+                channels
+                users
+                dms
+
+            Else:
+
+                The id as number of the subject.
         """
-        try:
-            int(subject_id)
-        except ValueError:
-            raise AttributeError(f"'{subject_id}' is no valid number")
+        if subject in ["guild", "channel", "user"]:
+            try:
+                int(subject_id)
+            except ValueError:
+                raise AttributeError(f"'{subject_id}' is no valid number.")
 
         if subject == "guild":
             guild = self.bot.get_guild(int(subject_id))
@@ -113,19 +153,58 @@ class BlackList(commands.Cog):
             await ctx.send(f'Added "{user.name}" to ignore list. '
                            f'None of the commands from this user will be executed anymore.')
 
+        elif subject == "all":
+            try:
+                self.add_ignore(subject_id, subject)
+            except KeyError:
+                raise AttributeError(f"'{subject_id}' is no valid argument.")
+            await ctx.send(f"All {subject_id} will be ignored now.")
+
         else:
-            raise AttributeError(f"'{subject}' is no valid argument")
+            raise AttributeError(f"'{subject}' is no valid argument.")
 
     @commands.command()
     @owner()
     async def note(self, ctx, subject, subject_id):
         """
-        Removes entities from the ignore list.
+        Removes an subject from the ignore list.
+
+        subject:
+
+            guild
+            channel
+            user
+            all:
+                Removes the 'all' modifier of the given subject.
+                Subjects that were added by id previously will NOT be removed. If that is your goal,
+                use 'every' instead.
+
+            every:
+                Removes every subject of the given type from the ignore list.
+
+        subject_id:
+
+            The id of the subject.
+
+            When using 'all' as subject:
+                guilds
+                channels
+                users
+                dms
+
+            When using 'every' as subject:
+                guild
+                channel
+                user
+
+            Else:
+                The id as number of the subject.
         """
-        try:
-            int(subject_id)
-        except ValueError:
-            raise AttributeError(f"'{subject_id}' is no valid number")
+        if subject in ["guild", "channel", "user"]:
+            try:
+                int(subject_id)
+            except ValueError:
+                raise AttributeError(f"'{subject_id}' is no valid number.")
 
         if subject == "guild":
             guild = self.bot.get_guild(int(subject_id))
@@ -160,8 +239,22 @@ class BlackList(commands.Cog):
             await ctx.send(f'Removed "{user.name}" from ignore list. '
                            f'Commands from this user are executed again.')
 
+        elif subject == "all":
+            try:
+                self.remove_ignore(subject_id, subject)
+            except KeyError:
+                raise AttributeError(f"'{subject_id}' is no valid argument.")
+            await ctx.send(f"{subject_id} will not be ignored anymore.")
+
+        elif subject == "every":
+            try:
+                self.remove_ignore(subject_id + "s", subject)
+            except KeyError:
+                raise AttributeError(f"'{subject_id}' is no valid argument.")
+            await ctx.send(f"Every {subject_id} was removed from the ignore list.")
+
         else:
-            raise AttributeError(f"'{subject}' is no valid argument")
+            raise AttributeError(f"'{subject}' is no valid argument.")
 
     @commands.command()
     @owner()
@@ -176,20 +269,36 @@ class BlackList(commands.Cog):
         channel_table = []
         guild_table = []
 
-        for u in self.ignored_users:
-            user = self.bot.get_user(u)
-            user_table.append([user.id,
-                               user.name,
-                               user.discriminator])
-        for c in self.ignored_channels:
-            channel = self.bot.get_channel(c)
-            channel_table.append([channel.id,
-                                  channel.name,
-                                  channel.guild.name])
-        for g in self.ignored_guilds:
-            guild = self.bot.get_guild(g)
-            guild_table.append([guild.id,
-                                guild.name])
+        if "all" not in self.ignored_users:
+            for u in self.ignored_users:
+                user = self.bot.get_user(u)
+                user_table.append([user.id,
+                                   user.name,
+                                   user.discriminator])
+        else:
+            user_table = [["all", "all", "all"]]
+
+        if "all" not in self.ignored_channels:
+            for c in self.ignored_channels:
+                channel = self.bot.get_channel(c)
+                channel_table.append([channel.id,
+                                      channel.name,
+                                      channel.guild.name])
+        else:
+            channel_table = [["all", "all", "all"]]
+
+        if "all" not in self.ignored_guilds:
+            for g in self.ignored_guilds:
+                guild = self.bot.get_guild(g)
+                guild_table.append([guild.id,
+                                    guild.name])
+        else:
+            guild_table = [["all", "all"]]
+
+        if "all" in self.ignored_dms:
+            dms = "Yes"
+        else:
+            dms = "No"
 
         message = "```" \
                   "Currently ignored:\n\n" \
@@ -198,7 +307,8 @@ class BlackList(commands.Cog):
                   "Channels:\n" \
                   f"{tab(channel_table, headers=channel_headers)}\n\n" \
                   f"Servers:\n" \
-                  f"{tab(guild_table, headers=guild_headers)}" \
+                  f"{tab(guild_table, headers=guild_headers)}\n\n" \
+                  f"Direct Messages: {dms}" \
                   "```"
 
         await ctx.send(message)
