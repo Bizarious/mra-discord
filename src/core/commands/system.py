@@ -69,6 +69,19 @@ class System(commands.Cog):
     async def config_change(self, ctx, cmd, conf="", value=""):
         """
         Manages bot and command configurations.
+
+        cmd:
+
+            status: Shows all existing configs and there values.
+            set: Modifies a config value.
+
+        conf:
+
+            The config to be modified.
+
+        value:
+
+            The value to be set.
         """
         if cmd == "status":
             s = "```\nAll existent configs:\n\n"
