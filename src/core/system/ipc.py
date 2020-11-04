@@ -1,13 +1,14 @@
 from multiprocessing import Queue
 from core.containers import TransferPackage
 from multiprocessing import Pipe
+from typing import Union
 
 
 class IPC:
     def __init__(self):
         self.queues = {}
 
-    def create_queues(self, *entities):
+    def create_queues(self, *entities: str):
         for e in entities:
             self.queues[e] = Queue()
 
@@ -17,7 +18,7 @@ class IPC:
         t.pack(**kwargs)
         return t
 
-    def send(self, *, dst, create_pipe=False, package, **kwargs):
+    def send(self, *, dst: str, create_pipe=False, package, **kwargs):
         if create_pipe:
             pipe1, pipe2 = Pipe()
         else:
@@ -26,7 +27,7 @@ class IPC:
         self.queues[dst].put(package)
         return pipe1
 
-    def check_queue(self, entity):
+    def check_queue(self, entity: str) -> Union[type, None]:
         queue: Queue = self.queues[entity]
         if not queue.empty():
             return queue.get()

@@ -104,7 +104,7 @@ class System(commands.Cog):
         else:
             await ctx.send(f'{temp} °C')
 
-    async def parse_commands(self, pkt):
+    async def parse_commands(self, pkt) -> bool:
         if pkt.cmd == "shutdown":
             await self.bot.shutdown()
             return False

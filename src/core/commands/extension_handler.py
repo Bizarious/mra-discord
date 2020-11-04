@@ -1,4 +1,5 @@
 import os
+from typing import Union
 from discord.ext import commands
 from core.permissions import owner
 from core.database import ConfigManager
@@ -32,7 +33,7 @@ class ExtensionHandler(commands.Cog, name="Cog Handler"):
                     paths[f] = f"{self.paths[path]}.{f[:-3]}"
         return paths
 
-    def get_ext(self, name):
+    def get_ext(self, name: str) -> Union[str, None]:
         paths = self.list_all_extensions()
         for f in paths.keys():
             if f[:-3] == name and f.endswith(".py") and not f.startswith("__"):
@@ -55,7 +56,7 @@ class ExtensionHandler(commands.Cog, name="Cog Handler"):
                 self.bot.load_extension(paths[f])
                 self.loaded_cogs[f[:-3]] = paths[f]
 
-    def get_available_ext(self):
+    def get_available_ext(self) -> list:
         s = []
         paths = self.list_all_extensions()
         for f in paths.keys():

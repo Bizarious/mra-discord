@@ -17,27 +17,27 @@ class Task(ABC):
         self._kwargs = None
 
     @property
-    def kwargs(self):
+    def kwargs(self) -> dict:
         return self._kwargs
 
     @kwargs.setter
-    def kwargs(self, kwargs):
+    def kwargs(self, kwargs: dict):
         self._kwargs = kwargs
 
     @property
-    def creation_time(self):
+    def creation_time(self) -> dt:
         return self._creation_time
 
     @property
-    def creation_time_string(self):
+    def creation_time_string(self) -> str:
         return self._creation_time.strftime(Dates.DATE_FORMAT.value)
 
     @property
-    def name(self):
+    def name(self) -> str:
         return self._name
 
     @name.setter
-    def name(self, name):
+    def name(self, name: str):
         self._name = name
 
     @abstractmethod
@@ -55,10 +55,10 @@ class Task(ABC):
 
 class TimeBasedTask(Task, ABC):
 
-    def __init__(self, *, author_id,
-                 channel_id=None,
-                 server_id=None,
-                 date_string="* * * * *", label=None, number=0):
+    def __init__(self, *, author_id: int,
+                 channel_id: int = None,
+                 server_id: int = None,
+                 date_string: str = "* * * * *", label: str = None, number: int = 0):
         Task.__init__(self, author_id=author_id,
                       channel_id=channel_id,
                       server_id=server_id,
@@ -89,7 +89,7 @@ class TimeBasedTask(Task, ABC):
 
         self.get_next_date()
 
-    def get_next_date(self):
+    def get_next_date(self) -> dt:
         if len(self.time) == 0:
             if self.counter == 0:
                 self.delete = True
@@ -108,14 +108,14 @@ class TimeBasedTask(Task, ABC):
                     seconds = int(time[:-1])
             delta = td(hours=hours, minutes=minutes, seconds=seconds)
             self._next_time = dt.now().replace(microsecond=0) + delta
+        return self.next_time
+
+    @property
+    def next_time(self) -> dt:
         return self._next_time
 
     @property
-    def next_time(self):
-        return self._next_time
-
-    @property
-    def nex_time_string(self):
+    def nex_time_string(self) -> str:
         return self._next_time.strftime(Dates.DATE_FORMAT.value)
 
     def calc_counter(self):
@@ -139,7 +139,7 @@ class TimeBasedTask(Task, ABC):
                           }
                 }
 
-    def from_json(self, kwargs):
+    def from_json(self, kwargs: dict):
         Task.from_json(self, kwargs)
         self._next_time = dt.strptime(kwargs["extra"]["next_time"], Dates.DATE_FORMAT.value)
         self.delete = kwargs["extra"]["delete"]

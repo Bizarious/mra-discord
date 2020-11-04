@@ -1,5 +1,6 @@
 import os
 import json
+from typing import Union
 
 
 class DataBasic:
@@ -24,7 +25,7 @@ class Data(DataBasic):
         return self._buffer
 
     @staticmethod
-    def check_path(path):
+    def check_path(path: str):
         if not os.path.exists(path):
             os.mkdir(path)
             print(f"Created {path}")
@@ -43,7 +44,7 @@ class Data(DataBasic):
         self.check_file(file, path)
         return open(f"{path}/{file}")
 
-    def get(self, *, file, path: str = "", buffer: bool = True):
+    def get(self, *, file, path: str = "", buffer: bool = True) -> str:
         if file not in self._buffer.keys():
             f = self._load_file(file=file, path=path)
             content = f.read()
@@ -53,7 +54,7 @@ class Data(DataBasic):
         else:
             return self._buffer[file]
 
-    def get_json(self, *, file, path: str = "", buffer: bool = True):
+    def get_json(self, *, file, path: str = "", buffer: bool = True) -> Union[list, dict]:
         if file not in self._buffer.keys():
             f = self._load_file(file=file + ".json", path=path)
             content = json.load(f)
@@ -63,7 +64,7 @@ class Data(DataBasic):
         else:
             return self._buffer[file]
 
-    def _save_file(self, *, data, file, path=""):
+    def _save_file(self, *, data, file: str, path: str = ""):
         path = f"{self.path}/{path}"
         self.check_path(path)
         f = open(f"{path}/{file}", "w")

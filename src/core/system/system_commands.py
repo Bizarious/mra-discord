@@ -7,7 +7,7 @@ def measure_temp():
     return float(os.popen("/opt/vc/bin/vcgencmd measure_temp").read()[5:8])
 
 
-def restart(args, t: int):
+def restart(args, t: float):
     print("restart")
     time.sleep(t)
     os.system("clear")

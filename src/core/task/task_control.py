@@ -1,5 +1,6 @@
 import importlib
 import os
+from typing import Union
 from core.task import task_base as tk
 from datetime import datetime as dt, timedelta as td
 from queue import PriorityQueue
@@ -131,25 +132,25 @@ class TaskManager(Process):
         self.tasks[tsk_dict["basic"]["author_id"]].append(tsk)
         self.task_queue.put((next_time, tsk.creation_time, tsk))
 
-    def delete_task_from_mapping(self, tsk: tk.TimeBasedTask):
+    def delete_task_from_mapping(self, tsk: tk.Task):
         author_id = tsk.author_id
         self.tasks[author_id].remove(tsk)
         self.data.set_json(file="tasks", data=self.export_tasks())
 
-    def delete_task_from_queue(self, tsk: tk.TimeBasedTask):
+    def delete_task_from_queue(self, tsk: tk.Task):
         for t in self.task_queue.queue:
             if t[2] == tsk:
                 self.task_queue.queue.remove(t)
                 return
         raise RuntimeError("Task not in queue")
 
-    def delete_task(self, tsk: tk.TimeBasedTask):
+    def delete_task(self, tsk: tk.Task):
         self.delete_task_from_mapping(tsk)
         self.delete_task_from_queue(tsk)
         del tsk
         self.set_next_date()
 
-    def get_task(self, task_id, author_id):
+    def get_task(self, task_id: int, author_id: int) -> tk.Task:
         if author_id not in self.tasks.keys():
             raise UserHasNoTasksException("No active tasks")
         elif len(self.tasks[author_id]) == 0:
@@ -158,7 +159,7 @@ class TaskManager(Process):
             raise TaskIdDoesNotExistException("Task id does not exist")
         return self.tasks[author_id][task_id]
 
-    def get_tasks(self, author_id):
+    def get_tasks(self, author_id: int) -> list:
         if author_id not in self.tasks.keys():
             raise UserHasNoTasksException("No active tasks")
         elif len(self.tasks[author_id]) == 0:
@@ -176,7 +177,7 @@ class TaskManager(Process):
         else:
             self.next_date = None
 
-    def check_date(self):
+    def check_date(self) -> bool:
         if self.next_date is not None:
             delta = td(seconds=5)
             now = dt.now().replace(microsecond=0)
@@ -200,7 +201,7 @@ class TaskManager(Process):
             self.running_tasks.append(executor)
             executor.start()
 
-    def parse_commands(self, pkt):
+    def parse_commands(self, pkt) -> Union[str, None]:
         if pkt is not None:
             try:
                 if pkt.cmd == "stop":

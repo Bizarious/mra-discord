@@ -6,7 +6,7 @@ class MessageParser:
             self.privacy = "private"
             self.message = ""
 
-    def parse(self, msg: str, bot):
+    def parse(self, msg: str, bot) -> Context:
         ctx = self.Context()
         message = msg
         args = ""

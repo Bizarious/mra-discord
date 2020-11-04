@@ -28,7 +28,7 @@ class Main:
         self.task_manager.join()
 
         if self.bot.restart:
-            restart(sys.argv, int(self.global_config.get_config("restartTimer")))
+            restart(sys.argv, float(self.global_config.get_config("restartTimer")))
         else:
             print("shutdown")
 

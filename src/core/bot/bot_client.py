@@ -1,4 +1,6 @@
 import discord
+from core.bot.errors import OnMessageCheckException, CmdParserException
+from typing import Union
 from discord.ext import commands, tasks
 from core.permissions import Permissions
 from core.database import Data, ConfigManager
@@ -62,6 +64,8 @@ class BotClient(commands.Bot):
             else:
                 for i in self.cmd_parsers:
                     result = await i[0](pkt)
+                    if not isinstance(result, bool):
+                        raise CmdParserException("Your function must return a bool")
                     if not result:
                         return
 
@@ -75,7 +79,10 @@ class BotClient(commands.Bot):
     async def on_message(self, message):
         limits = []
         for limit in self.limit_cmd_processing:
-            limits.append(limit[0](message))
+            result = limit[0](message)
+            if not isinstance(result, bool):
+                raise OnMessageCheckException("Your function must return a bool")
+            limits.append(result)
         if all(limits):
             await self.process_commands(message)
 
@@ -117,25 +124,25 @@ class BotClient(commands.Bot):
                 self.prefixes[str(g.id)] = self.default_prefix
         self.data.set_json(file="prefixes", data=self.prefixes)
 
-    def change_prefix(self, prefix, guild_id):
+    def change_prefix(self, prefix, guild_id: int):
         self.prefixes[str(guild_id)] = prefix
         self.data.set_json(file="prefixes", data=self.prefixes)
 
     def register_cog_handler(self):
         self.load_extension("core.commands.extension_handler")
 
-    def add_limit(self, fct, name):
+    def add_limit(self, fct, name: str):
         self.limit_cmd_processing.append((fct, name))
 
-    def remove_limit(self, name):
+    def remove_limit(self, name: str):
         for i in range(len(self.limit_cmd_processing)):
             if self.limit_cmd_processing[i][1] == name:
                 self.limit_cmd_processing.remove(self.limit_cmd_processing[i])
 
-    def add_command_parser(self, fct, name):
+    def add_command_parser(self, fct, name: str):
         self.cmd_parsers.append((fct, name))
 
-    def remove_command_parser(self, name):
+    def remove_command_parser(self, name: str):
         for i in range(len(self.cmd_parsers)):
             if self.cmd_parsers[i][1] == name:
                 self.cmd_parsers.remove(self.limit_cmd_processing[i])
@@ -147,26 +154,26 @@ class BotClient(commands.Bot):
         if hasattr(cog, "parse_commands"):
             self.add_command_parser(cog.parse_commands, cog.__cog_name__)
 
-    def remove_cog(self, name):
+    def remove_cog(self, name: str):
         self.remove_limit(name)
         self.remove_command_parser(name)
         commands.Bot.remove_cog(self, name)
 
-    def get_guild_id(self, name):
+    def get_guild_id(self, name: str) -> Union[int, None]:
         for g in self.guilds:
             if g.name == name:
                 return g.id
-        raise RuntimeError("Server not found")
+        return None
 
-    def get_channel_id(self, guild, channel):
+    def get_channel_id(self, guild, channel) -> Union[int, None]:
         for g in self.guilds:
             for c in g.channels:
                 if g.name == guild and c.name == channel:
                     return c.id
-        raise RuntimeError("Channel not found")
+        return None
 
-    def get_user_id(self, name):
+    def get_user_id(self, name) -> Union[int, None]:
         for u in self.users:
             if u.name == name:
                 return u.id
-        raise RuntimeError("User not found")
+        return None

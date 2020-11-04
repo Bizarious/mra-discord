@@ -2,6 +2,7 @@ from discord.ext import commands
 from core.permissions import owner
 from tabulate import tabulate as tab
 from core.database import Data, ConfigManager
+from typing import Union
 
 
 class BlackList(commands.Cog):
@@ -28,35 +29,35 @@ class BlackList(commands.Cog):
             self.data.set_json(file="blacklist", data=self.permissions)
 
     @property
-    def bot_owner(self):
+    def bot_owner(self) -> int:
         return int(self.config.get_config("botOwner"))
 
     @property
-    def ignored_users(self):
+    def ignored_users(self) -> list:
         return self.permissions["ignored_users"]
 
     @property
-    def ignored_guilds(self):
+    def ignored_guilds(self) -> list:
         return self.permissions["ignored_guilds"]
 
     @property
-    def ignored_channels(self):
+    def ignored_channels(self) -> list:
         return self.permissions["ignored_channels"]
 
     @property
-    def ignored_dms(self):
+    def ignored_dms(self) -> list:
         return self.permissions["ignored_dms"]
 
     @property
-    def blacklist(self):
+    def blacklist(self) -> list:
         return self.permissions["blacklist"]
 
-    def add_ignore(self, subject, subject_id):
+    def add_ignore(self, subject: str, subject_id: Union[str, int]):
         real_subject = f"ignored_{subject}"
         self.permissions[real_subject].append(subject_id)
         self.data.set_json(file="blacklist", data=self.permissions)
 
-    def remove_ignore(self, subject, subject_id):
+    def remove_ignore(self, subject: str, subject_id: Union[str, int]):
         real_subject = f"ignored_{subject}"
         if subject_id == "every":
             if real_subject not in self.permissions.keys():
@@ -66,7 +67,7 @@ class BlackList(commands.Cog):
             self.permissions[real_subject].remove(subject_id)
         self.data.set_json(file="blacklist", data=self.permissions)
 
-    def check_ignored(self, message):
+    def check_ignored(self, message) -> bool:
         a_id = message.author.id
         c = message.channel
         g = message.guild
@@ -313,7 +314,7 @@ class BlackList(commands.Cog):
 
         await ctx.send(message)
 
-    def on_message_check(self, message):
+    def on_message_check(self, message) -> bool:
         return self.check_ignored(message)
 
 
