@@ -12,6 +12,7 @@ class Permissions:
         self.permissions_needed = {"known_users": [],
                                    "groups": {}}
         self.default_groups = []
+        self.new_groups = []
         self.permissions = self.data.get_json(file="permissions")
 
         self.first_startup()
@@ -28,8 +29,10 @@ class Permissions:
     def add_group(self, name, default=False):
         if name not in self.groups.keys():
             self.groups[name] = []
+            self.new_groups.append(name)
         if default:
-            self.default_groups.append(name)
+            if name not in self.default_groups:
+                self.default_groups.append(name)
 
     @property
     def bot_owner(self) -> int:
@@ -48,6 +51,15 @@ class Permissions:
 
     def group_exists(self, group: str) -> bool:
         return group in self.groups.keys()
+
+    def member_of(self, uid: int) -> list:
+        if uid not in self.known_users:
+            raise GroupUserException("This user is not known.")
+        result = []
+        for g in self.groups.keys():
+            if uid in self.groups[g]:
+                result.append(g)
+        return result
 
     def get_group_list(self, name) -> Union[list, None]:
         if name in self.permissions["groups"].keys():
@@ -75,12 +87,12 @@ class Permissions:
         self.data.set_json(file="permissions", data=self.permissions)
 
     def add_to_default_groups(self, uid: int):
-        if uid not in self.known_users:
-            for g in self.default_groups:
-                if uid not in self.get_group_list(g):
-                    self.known_users.append(uid)
-                    self.add_to_group(uid, g)
-            self.data.set_json(file="permissions", data=self.permissions)
+        for g in self.default_groups:
+            if uid not in self.get_group_list(g) and (g in self.new_groups or uid not in self.known_users):
+                self.add_to_group(uid, g)
+            if uid not in self.known_users:
+                self.known_users.append(uid)
+        self.data.set_json(file="permissions", data=self.permissions)
 
     def delete_user(self, uid: int):
         for g in self.permissions["groups"].values():

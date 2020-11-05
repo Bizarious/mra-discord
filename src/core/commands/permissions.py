@@ -14,6 +14,17 @@ class PermissionsHandler(commands.Cog, name="Permissions Handler"):
     @commands.command("autg")
     @commands.check(is_owner)
     async def add_user_to_group(self, ctx, uid, group):
+        """
+        Adds a user to a group.
+
+        uid:
+
+            The users id.
+
+        group:
+
+            The group name.
+        """
         try:
             int(uid)
         except ValueError:
@@ -28,6 +39,17 @@ class PermissionsHandler(commands.Cog, name="Permissions Handler"):
 
     @commands.command("rufg")
     async def remove_user_from_group(self, ctx, uid, group):
+        """
+        Removes a user from a group.
+
+        uid:
+
+            The users id.
+
+        group:
+
+            The group name.
+        """
         try:
             int(uid)
         except ValueError:
