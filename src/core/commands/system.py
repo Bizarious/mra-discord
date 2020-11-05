@@ -1,6 +1,6 @@
 import os
 from discord.ext import commands
-from core.permissions import owner
+from core.permissions import is_owner
 from core.system import measure_temp
 from core.database import ConfigManager
 from core.database.errors import ConfigNotExistentError
@@ -12,7 +12,7 @@ class System(commands.Cog):
         self.config: ConfigManager = self.bot.config
 
     @commands.command(hidden=True)
-    @owner()
+    @commands.check(is_owner)
     async def shutdown(self, _, date_string=None):
         """
         Shuts down the bot.
@@ -28,7 +28,7 @@ class System(commands.Cog):
             self.bot.ipc.send(dst="task", package=t, cmd="task", task="Shutdown", author_id=0)
 
     @commands.command(hidden=True)
-    @owner()
+    @commands.check(is_owner)
     async def restart(self, _, date_string=None):
         """
         Restarts the bot.
@@ -44,7 +44,7 @@ class System(commands.Cog):
             self.bot.ipc.send(dst="task", package=t, cmd="task", task="Shutdown", author_id=0)
 
     @commands.command(hidden=True)
-    @owner()
+    @commands.check(is_owner)
     async def update(self, ctx):
         """
         Pulls changes from git.
@@ -56,7 +56,7 @@ class System(commands.Cog):
             await ctx.send("Updated")
 
     @commands.command("prefix", hidden=True)
-    @owner()
+    @commands.check(is_owner)
     async def change_prefix(self, ctx, prefix):
         """
         Changes command prefix fot the server.
@@ -65,7 +65,7 @@ class System(commands.Cog):
         await ctx.send(f'Changed prefix for server "{self.bot.get_guild(ctx.message.guild.id).name}" to "{prefix}"')
 
     @commands.command("config")
-    @owner()
+    @commands.check(is_owner)
     async def config_change(self, ctx, cmd, conf="", value=""):
         """
         Manages bot and command configurations.
@@ -105,7 +105,7 @@ class System(commands.Cog):
             await ctx.send(f"'{cmd}' is no valid argument.")
 
     @commands.command(hidden=True)
-    @owner()
+    @commands.check(is_owner)
     async def temp(self, ctx):
         """
         Displays the cpu temperature.

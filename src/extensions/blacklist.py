@@ -1,5 +1,5 @@
 from discord.ext import commands
-from core.permissions import owner
+from core.permissions import is_owner
 from tabulate import tabulate as tab
 from core.database import Data, ConfigManager
 from typing import Union
@@ -87,7 +87,7 @@ class BlackList(commands.Cog):
         return False
 
     @commands.command()
-    @owner()
+    @commands.check(is_owner)
     async def ignore(self, ctx, subject, subject_id):
         """
         Adds an subject to the ignore list.
@@ -165,7 +165,7 @@ class BlackList(commands.Cog):
             raise AttributeError(f"'{subject}' is no valid argument.")
 
     @commands.command()
-    @owner()
+    @commands.check(is_owner)
     async def note(self, ctx, subject, subject_id):
         """
         Removes an subject from the ignore list.
@@ -258,7 +258,7 @@ class BlackList(commands.Cog):
             raise AttributeError(f"'{subject}' is no valid argument.")
 
     @commands.command()
-    @owner()
+    @commands.check(is_owner)
     async def ignored(self, ctx):
         """
         Shows all ignored entities.

@@ -1,11 +1,12 @@
 from discord.ext import commands
 from tabulate import tabulate as tab
-from core.permissions import owner_check, is_it_me
+from core.permissions import is_owner, is_it_me
 
 
 class Tasks(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.bot.permit.add_group("task", True)
 
     @commands.command()
     async def gt(self, ctx, a_id=None):
@@ -18,7 +19,7 @@ class Tasks(commands.Cog):
         """
         author_id = ctx.author.id
         if a_id is not None:
-            if not is_it_me(ctx, int(a_id)) and not owner_check(ctx):
+            if not is_it_me(ctx, int(a_id)) and not is_owner(ctx):
                 raise commands.CheckFailure()
             author_id = int(a_id)
         t = self.bot.ipc.pack()
@@ -53,7 +54,7 @@ class Tasks(commands.Cog):
         """
         author_id = ctx.author.id
         if a_id is not None:
-            if not is_it_me(ctx, int(a_id)) and not owner_check(ctx):
+            if not is_it_me(ctx, int(a_id)) and not is_owner(ctx):
                 raise commands.CheckFailure()
             author_id = int(a_id)
         t = self.bot.ipc.pack()

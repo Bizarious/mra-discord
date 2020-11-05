@@ -1,12 +1,12 @@
 import os
 from typing import Union
 from discord.ext import commands
-from core.permissions import owner
+from core.permissions import is_owner
 from core.database import ConfigManager
 from tabulate import tabulate as tab
 
 
-class ExtensionHandler(commands.Cog, name="Cog Handler"):
+class ExtensionHandler(commands.Cog, name="Extension Handler"):
 
     base_path = "./core/commands"
     base_import_path = "core.commands"
@@ -65,6 +65,7 @@ class ExtensionHandler(commands.Cog, name="Cog Handler"):
         return s
 
     @commands.command("listexts")
+    @commands.check(is_owner)
     async def list_extensions(self, ctx):
         """
         Lists all available extensions to load.
@@ -99,7 +100,7 @@ class ExtensionHandler(commands.Cog, name="Cog Handler"):
         await ctx.send(result)
 
     @commands.command("load")
-    @owner()
+    @commands.check(is_owner)
     async def load_ext(self, ctx, cog):
         """
         Loads specified extension.
@@ -116,7 +117,7 @@ class ExtensionHandler(commands.Cog, name="Cog Handler"):
         self.loaded_cogs[cog] = cog_path
 
     @commands.command("unload")
-    @owner()
+    @commands.check(is_owner)
     async def unload_ext(self, ctx, cog):
         """
         Unloads specified extension.
@@ -128,7 +129,7 @@ class ExtensionHandler(commands.Cog, name="Cog Handler"):
         await ctx.send("Cog is not loaded")
 
     @commands.command("reload")
-    @owner()
+    @commands.check(is_owner)
     async def reload_ext(self, ctx, cog):
         """
         Reloads specific extension.
@@ -139,7 +140,7 @@ class ExtensionHandler(commands.Cog, name="Cog Handler"):
         await ctx.send("Cog is not loaded")
 
     @commands.command("reloadall")
-    @owner()
+    @commands.check(is_owner)
     async def reload_all_ext(self, _):
         """
         Reloads all loaded extensions.
@@ -148,7 +149,7 @@ class ExtensionHandler(commands.Cog, name="Cog Handler"):
             self.bot.reload_extension(self.loaded_cogs[c])
 
     @commands.command("loadall")
-    @owner()
+    @commands.check(is_owner)
     async def load_all_ext(self, _):
         """
         Loads all available extensions.
@@ -164,7 +165,7 @@ class ExtensionHandler(commands.Cog, name="Cog Handler"):
                     pass
 
     @commands.command("unloadall")
-    @owner()
+    @commands.check(is_owner)
     async def unload_all_ext(self, _):
         """
         Unloads all extensions.

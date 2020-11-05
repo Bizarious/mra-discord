@@ -6,6 +6,7 @@ import random
 import asyncio
 from core.version import __version__
 from core.enums import Dates
+from core.permissions import is_group_member, is_owner
 
 
 class Misc(commands.Cog):
@@ -46,6 +47,7 @@ class Misc(commands.Cog):
                     await asyncio.sleep(0.2)
 
     @commands.command("rmdme")
+    @commands.check_any(commands.check(is_owner), commands.check(is_group_member("task")))
     async def remind_me(self, ctx, date_string, message, label=None, number=0):
         """
         Adds a reminder-task.
