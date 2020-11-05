@@ -34,8 +34,6 @@ class BotClient(commands.Bot):
         self.limit_cmd_processing = []
         self.cmd_parsers = []
 
-        self.bot_owner = self.permit.bot_owner
-
         # flags
         self.restart = False
 
