@@ -94,17 +94,40 @@ class Misc(commands.Cog):
         start_date = self.bot.start_time.strftime(Dates.DATE_FORMAT.value)
 
         embed = discord.Embed(color=discord.Colour.blue(),
-                              title=f"{self.bot.user.name} Statistics",
-                              description="\uFeFF")
+                              title="Bot Statistics",
+                              description=f"General Information about <@{self.bot.user.id}>")
 
-        embed.add_field(name="Bot Owner", value=f"<@{self.bot.bot_owner}>", inline=False)
-        embed.add_field(name="Bot Version", value=__version__, inline=False)
-        embed.add_field(name="Online since", value=start_date, inline=False)
-        embed.add_field(name="Python Version", value=py_version, inline=True)
-        embed.add_field(name="Discord.py Version", value=dpy_version, inline=True)
-        embed.add_field(name="OS", value=system, inline=True)
-        embed.add_field(name="Observable Users", value=str(member_count), inline=True)
-        embed.add_field(name="Observable Servers", value=str(server_count), inline=True)
+        embed.add_field(name="Bot Owner", value=f"<@{self.bot.permit.bot_owner}>", inline=False)
+        embed.add_field(name="Bot Version", value=f"`{__version__}`", inline=False)
+        embed.add_field(name="Online since", value=f"{start_date}", inline=False)
+        embed.add_field(name="Python Version", value=f"{py_version}", inline=True)
+        embed.add_field(name="Discord.py Version", value=f"{dpy_version}", inline=True)
+        embed.add_field(name="OS", value=f"{system}", inline=True)
+        embed.add_field(name="Observable Users", value=f"{str(member_count)}", inline=True)
+        embed.add_field(name="Observable Servers", value=f"{str(server_count)}", inline=True)
+
+        await ctx.send(embed=embed)
+
+    @commands.command("userinfo")
+    async def user_info(self, ctx):
+        """
+        Displays information about the user.
+        """
+        groups: list = self.bot.permit.member_of(ctx.author.id)
+        groups_str = ""
+        if not groups:
+            groups_str = "-None-"
+        for g in groups:
+            groups_str += f"{g}, "
+        if groups_str != "-None-":
+            groups_str = groups_str[:-2]
+
+        embed = discord.Embed(color=discord.Colour.blue(),
+                              title=f"User Statistics",
+                              description=f"General Information about <@{ctx.author.id}>")
+        if ctx.author.id == self.bot.permit.bot_owner:
+            embed.add_field(name="Bot Owner", value="`You are the bot owner`", inline=False)
+        embed.add_field(name="Groups you are member of", value=f"{groups_str}", inline=False)
 
         await ctx.send(embed=embed)
 
