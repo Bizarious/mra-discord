@@ -1,4 +1,7 @@
 import sys
+import time
+from discord import HTTPException
+from aiohttp import ClientConnectorError
 from core.bot import BotClient
 from core.system.system_commands import restart
 from core.database import Data, ConfigManager
@@ -22,7 +25,18 @@ class Main:
 
     def run(self):
         self.task_manager.start()
-        self.bot.run(self.bot_token, reconnect=True)
+        try:
+            self.bot.run(self.bot_token, reconnect=True)
+
+        except (ClientConnectorError, HTTPException):
+            try:
+                print("Cannot connect to discord. Restarting.")
+                self.bot.restart = True
+                time.sleep(5)
+
+            except KeyboardInterrupt:
+                return
+
         t = self.ipc.pack()
         self.ipc.send(dst="task", package=t, cmd="stop")
         self.task_manager.join()
