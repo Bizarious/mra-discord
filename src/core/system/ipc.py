@@ -1,7 +1,7 @@
 from multiprocessing import Queue
 from core.containers import TransferPackage
 from multiprocessing import Pipe
-from typing import Union
+from typing import Union, Any
 
 
 class IPC:
@@ -27,8 +27,12 @@ class IPC:
         self.queues[dst].put(package)
         return pipe1
 
-    def check_queue(self, entity: str) -> Union[type, None]:
+    def check_queue(self, entity: str) -> Union[Any, None]:
         queue: Queue = self.queues[entity]
         if not queue.empty():
             return queue.get()
         return None
+
+    def check_queue_block(self, entity: str) -> Union[Any, None]:
+        queue: Queue = self.queues[entity]
+        return queue.get()
