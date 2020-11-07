@@ -64,7 +64,7 @@ class TimeBasedTask(Task, ABC):
                       server_id=server_id,
                       label=label)
 
-        self.time = []
+        self.time = []  # empty, if date string is not of form "* * * * *"
         self.date_string = date_string
         if number == 0:
             self.counter = -1
@@ -121,12 +121,8 @@ class TimeBasedTask(Task, ABC):
     def calc_counter(self):
         if self.counter > 0:
             self.counter = self.counter - 1
-        if len(self.time) == 0:
-            if self.counter == 0:
-                self.delete = True
-        else:
-            if self.counter == 0:
-                self.delete = True
+        if self.counter == 0:
+            self.delete = True
 
     def to_json(self) -> dict:
         return {"basic": self.kwargs,
