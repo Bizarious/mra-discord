@@ -11,7 +11,7 @@ class System(commands.Cog):
         self.bot = bot
         self.config: ConfigManager = self.bot.config
 
-    @commands.command(hidden=True)
+    @commands.command()
     @commands.check(is_owner)
     async def shutdown(self, _, date_string=None):
         """
@@ -27,7 +27,7 @@ class System(commands.Cog):
             t = self.bot.ipc.pack(author_id=0, date_string=date_string, mode="shutdown")
             self.bot.ipc.send(dst="task", package=t, cmd="task", task="Shutdown", author_id=0)
 
-    @commands.command(hidden=True)
+    @commands.command()
     @commands.check(is_owner)
     async def restart(self, _, date_string=None):
         """
@@ -43,7 +43,7 @@ class System(commands.Cog):
             t = self.bot.ipc.pack(author_id=0, date_string=date_string, mode="restart")
             self.bot.ipc.send(dst="task", package=t, cmd="task", task="Shutdown", author_id=0)
 
-    @commands.command(hidden=True)
+    @commands.command()
     @commands.check(is_owner)
     async def update(self, ctx):
         """
@@ -55,7 +55,7 @@ class System(commands.Cog):
         else:
             await ctx.send("Updated")
 
-    @commands.command("prefix", hidden=True)
+    @commands.command("prefix")
     @commands.check(is_owner)
     async def change_prefix(self, ctx, prefix):
         """
@@ -104,7 +104,7 @@ class System(commands.Cog):
         else:
             await ctx.send(f"'{cmd}' is no valid argument.")
 
-    @commands.command(hidden=True)
+    @commands.command()
     @commands.check(is_owner)
     async def temp(self, ctx):
         """
