@@ -66,7 +66,6 @@ class TaskManager(Process):
         self.next_date = None
 
         self.register_all_tasks()
-        self.import_tasks(self.data.get_json(file="tasks"))
 
     def register_task(self, module_path: str, file: str):
         task_module = importlib.import_module(f'{module_path}.{file}')
@@ -112,6 +111,7 @@ class TaskManager(Process):
             raise TaskCreationError(f"Task could not be created: {e}")
         tsk.name = pkt.task
         tsk.kwargs = pkt.kwargs
+        tsk.calc_counter()
         self.task_queue.put((tsk.next_time, tsk.creation_time, tsk))  # task is added to queue
         self.tasks[pkt.author_id].append(tsk)  # task is appended to author list
         self.data.set_json(file="tasks", data=self.export_tasks())
@@ -190,8 +190,8 @@ class TaskManager(Process):
         if self.check_date():
             tsk_tuple: tuple = self.task_queue.get()
             tsk: tk.TimeBasedTask = tsk_tuple[2]
-            tsk.calc_counter()
             if not tsk.delete:
+                tsk.calc_counter()
                 new_task_tuple = (tsk.get_next_date(), tsk.creation_time, tsk)
                 self.task_queue.put(new_task_tuple)
             else:
@@ -206,6 +206,8 @@ class TaskManager(Process):
             try:
                 if pkt.cmd == "stop":
                     return "stop"
+                elif pkt.cmd == "wait":
+                    return "wait"
                 elif pkt.cmd == "task":
                     self.add_task(pkt)
                     self.set_next_date()
@@ -232,6 +234,12 @@ class TaskManager(Process):
             t.join()
 
     def run(self):
+        pkt = self.ipc.check_queue_block("task")
+        if pkt.cmd == "stop":
+            self.stop()
+            return
+        self.import_tasks(self.data.get_json(file="tasks"))
+
         try:
             while True:
                 pkt = self.ipc.check_queue("task")
@@ -239,6 +247,13 @@ class TaskManager(Process):
                 if stop == "stop":
                     self.stop()
                     break
+                elif stop == "wait":
+                    while not self.task_queue.empty():
+                        self.task_queue.get()
+                    self.tasks = {}
+                    print("Waiting")
+                    self.ipc.check_queue_block("task")
+                    self.import_tasks(self.data.get_json(file="tasks"))
                 self.tasks_loop()
                 time.sleep(0.2)
         except KeyboardInterrupt:
