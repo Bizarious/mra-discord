@@ -54,6 +54,8 @@ class BlackList(commands.Cog):
 
     def add_ignore(self, subject: str, subject_id: Union[str, int]):
         real_subject = f"ignored_{subject}"
+        if subject_id in self.permissions[real_subject]:
+            raise ValueError(subject_id)
         self.permissions[real_subject].append(subject_id)
         self.data.set_json(file="blacklist", data=self.permissions)
 
@@ -159,6 +161,8 @@ class BlackList(commands.Cog):
                 self.add_ignore(subject_id, subject)
             except KeyError:
                 raise AttributeError(f"'{subject_id}' is no valid argument.")
+            except ValueError:
+                raise AttributeError(f"'{subject}' is already part of the '{subject_id}' ignore list.")
             await ctx.send(f"All {subject_id} will be ignored now.")
 
         else:
