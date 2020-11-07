@@ -7,6 +7,7 @@ class PermissionsHandler(commands.Cog, name="Permissions Handler"):
     def __init__(self, bot):
         self.bot = bot
         self.permissions: Permissions = self.bot.permit
+        self.permissions.add_group("Test1")
 
     def check_default_users(self, uid: int):
         self.permissions.add_to_default_groups(uid)
@@ -38,6 +39,7 @@ class PermissionsHandler(commands.Cog, name="Permissions Handler"):
         await ctx.send(f"Added <@{uid}> to '{group}'.")
 
     @commands.command("rufg")
+    @commands.check(is_owner)
     async def remove_user_from_group(self, ctx, uid, group):
         """
         Removes a user from a group.
@@ -62,12 +64,61 @@ class PermissionsHandler(commands.Cog, name="Permissions Handler"):
         self.permissions.remove_from_group(int(uid), group)
         await ctx.send(f"Removed <@{uid}> from '{group}'.")
 
+    @commands.command("deluser")
+    @commands.check(is_owner)
+    async def delete_user(self, ctx, uid):
+        """
+        Removes a user from all groups and the list of known users.
+
+        uid:
+
+            The users id.
+        """
+        try:
+            int(uid)
+        except ValueError:
+            raise AttributeError(f"'{uid}' is no valid number.")
+
+        self.permissions.delete_user(int(uid))
+        await ctx.send(f"Removed <@{uid}> from all groups.")
+
+    @commands.command("resetperm")
+    @commands.check(is_owner)
+    async def delete_all_users(self, ctx):
+        """
+        Removes all users. Serves as a 'reset' of the permissions state.
+        """
+        self.permissions.delete_all_users()
+        await ctx.send("Removed all users from the permissions.")
+
+    @commands.command("adu")
+    @commands.check(is_owner)
+    async def set_default_permissions(self, ctx):
+        """
+        Discovers unknown users and adds them to the default groups.
+        """
+        users = [u.id for u in self.bot.users if u != self.bot.user]
+        counter = self.permissions.add_to_default_groups(*users)
+        await ctx.send(f"```Added {counter} new users to the default groups.```")
+
+    @commands.command("showgr")
+    @commands.check(is_owner)
+    async def get_groups(self, ctx):
+        """
+        Displays all available groups.
+        """
+        groups = self.permissions.groups.keys()
+        result = "```Available groups:\n\n"
+        for g in groups:
+            result += f"{g}\n"
+        result += "```"
+
+        await ctx.send(result)
+
     @commands.Cog.listener()
     async def on_ready(self):
-        users = self.bot.users
-        for u in users:
-            if u != self.bot.user:
-                self.permissions.add_to_default_groups(u.id)
+        users = [u.id for u in self.bot.users if u != self.bot.user]
+        self.permissions.add_to_default_groups(*users)
 
     @commands.Cog.listener()
     async def on_member_join(self, user):

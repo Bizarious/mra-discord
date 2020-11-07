@@ -42,11 +42,17 @@ class Permissions:
     def known_users(self) -> list:
         return self.permissions["known_users"]
 
+    @known_users.setter
+    def known_users(self, value: list):
+        self.permissions["known_users"] = value
+
     @property
-    def groups(self):
+    def groups(self) -> dict:
         return self.permissions["groups"]
 
     def in_group(self, uid: int, group: str) -> bool:
+        if not self.group_exists(group):
+            raise GroupException(f"Group '{group}' does not exist.")
         return uid in self.get_group_list(group)
 
     def group_exists(self, group: str) -> bool:
@@ -86,18 +92,31 @@ class Permissions:
             raise GroupException("Group not found")
         self.data.set_json(file="permissions", data=self.permissions)
 
-    def add_to_default_groups(self, uid: int):
-        for g in self.default_groups:
-            if uid not in self.get_group_list(g) and (g in self.new_groups or uid not in self.known_users):
-                self.add_to_group(uid, g)
-            if uid not in self.known_users:
-                self.known_users.append(uid)
+    def add_to_default_groups(self, *uids: int) -> int:
+        counter = 0
+        for uid in uids:
+            for g in self.default_groups:
+                if uid not in self.get_group_list(g) and (g in self.new_groups or uid not in self.known_users):
+                    self.add_to_group(uid, g)
+                if uid not in self.known_users:
+                    self.known_users.append(uid)
+                    counter += 1
         self.data.set_json(file="permissions", data=self.permissions)
+        self.new_groups = []
+        return counter
 
     def delete_user(self, uid: int):
         for g in self.permissions["groups"].values():
-            g.remove(uid)
+            if uid in g:
+                g.remove(uid)
         self.known_users.remove(uid)
+        self.data.set_json(file="permissions", data=self.permissions)
+
+    def delete_all_users(self):
+        for g in self.groups.keys():
+            self.groups[g] = []
+        self.known_users = []
+        self.data.set_json(file="permissions", data=self.permissions)
 
 
 def is_it_me(ctx, a_id: int) -> bool:
@@ -108,7 +127,12 @@ def is_owner(ctx) -> bool:
     return ctx.message.author.id == ctx.bot.permit.bot_owner
 
 
-def is_group_member(group: str):
+def is_group_member(*groups: str):
     def in_group(ctx):
-        return ctx.bot.permit.in_group(ctx.author.id, group)
+        if len(groups) == 0:
+            return True
+        result = []
+        for group in groups:
+            result.append(ctx.bot.permit.in_group(ctx.author.id, group))
+        return all(result)
     return in_group
