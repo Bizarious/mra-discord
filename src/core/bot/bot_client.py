@@ -69,6 +69,10 @@ class BotClient(commands.Bot):
 
     # Events
     async def on_ready(self):
+        # sending package to task manager to let it start
+        t = self.ipc.pack()
+        self.ipc.send(dst="task", package=t, cmd="start")
+
         self.check_prefixes()
         await self.change_presence(status=discord.Status.online)
         self.background_loop.start()
