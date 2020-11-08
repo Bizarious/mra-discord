@@ -24,7 +24,7 @@ class BotClient(commands.Bot):
         intents = discord.Intents.default()
         intents.members = True
 
-        commands.Bot.__init__(self, command_prefix=self.get_prefix, intents=intents)
+        commands.Bot.__init__(self, command_prefix=self.return_prefix, intents=intents)
 
         self.core_cogs_path = "./core/commands"
         self.core_import_cogs_path = "core.commands"
@@ -115,10 +115,16 @@ class BotClient(commands.Bot):
         await self.change_presence(status=discord.Status.offline)
         await self.logout()
 
-    async def get_prefix(self, message):
+    def return_prefix(self, _, message):
         if message.guild is None:
             return self.default_prefix
         return self.prefixes[str(message.guild.id)]
+
+    def return_prefix_message_only(self, message):
+        """
+        A wrapper for prefix return.
+        """
+        return self.return_prefix(None, message)
 
     def check_prefixes(self):
         for g in self.guilds:
