@@ -55,9 +55,21 @@ class Tasks(commands.Cog):
         """
         author_id = ctx.author.id
         if a_id is not None:
+
+            try:
+                int(a_id)
+            except ValueError:
+                raise RuntimeError(f"{a_id} is no valid number.")
             if not is_it_me(ctx, int(a_id)) and not is_owner(ctx):
                 raise commands.CheckFailure()
             author_id = int(a_id)
+
+        if task_id != "all":
+            try:
+                int(task_id)
+            except ValueError:
+                raise RuntimeError("task_id must be 'all' or a valid number.")
+
         t = self.bot.ipc.pack()
         pipe = self.bot.ipc.send(dst="task",
                                  create_pipe=True,
