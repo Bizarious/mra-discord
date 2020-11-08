@@ -263,7 +263,6 @@ class TaskManager(Process):
                     while not self.task_queue.empty():
                         self.task_queue.get()
                     self.tasks = {}
-                    print("Waiting")
                     self.ipc.check_queue_block("task")
                     self.import_tasks(self.data.get_json(file="tasks"))
                 self.tasks_loop()
