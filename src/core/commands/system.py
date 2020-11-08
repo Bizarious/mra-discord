@@ -92,9 +92,9 @@ class System(commands.Cog):
 
         elif cmd == "set":
             if conf == "":
-                raise AttributeError(f"Conf must not be empty")
+                raise RuntimeError(f"Conf must not be empty")
             if value == "":
-                raise AttributeError(f"Value must not be empty")
+                raise RuntimeError(f"Value must not be empty")
             try:
                 self.config.set_config(conf, value)
             except ConfigNotExistentError:

@@ -64,7 +64,7 @@ class Misc(commands.Cog):
         try:
             int(number)
         except ValueError:
-            raise AttributeError(f"'{number}' is no valid number")
+            raise RuntimeError(f"'{number}' is no valid number")
         if message_args != "":
             if not is_group_member("taskExtra")(ctx) and not is_owner(ctx):
                 raise PermissionError("You are not allowed to use special message arguments.")

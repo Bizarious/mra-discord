@@ -28,7 +28,7 @@ class PermissionsHandler(commands.Cog, name="Permissions Handler"):
         try:
             int(uid)
         except ValueError:
-            raise AttributeError(f"'{uid}' is no valid number.")
+            raise RuntimeError(f"'{uid}' is no valid number.")
         if int(uid) not in self.permissions.known_users:
             raise GroupUserException(f"The user of the id '{uid}' is not known.")
         if int(uid) == ctx.author.id and not is_owner(ctx):
@@ -54,7 +54,7 @@ class PermissionsHandler(commands.Cog, name="Permissions Handler"):
         try:
             int(uid)
         except ValueError:
-            raise AttributeError(f"'{uid}' is no valid number.")
+            raise RuntimeError(f"'{uid}' is no valid number.")
         if int(uid) not in self.permissions.known_users:
             raise GroupUserException(f"The user of the id '{uid}' is not known.")
         if int(uid) == ctx.author.id and not is_owner(ctx):
@@ -76,7 +76,7 @@ class PermissionsHandler(commands.Cog, name="Permissions Handler"):
         try:
             int(uid)
         except ValueError:
-            raise AttributeError(f"'{uid}' is no valid number.")
+            raise RuntimeError(f"'{uid}' is no valid number.")
 
         self.permissions.delete_user(int(uid))
         await ctx.send(f"Removed <@{uid}> from all groups.")

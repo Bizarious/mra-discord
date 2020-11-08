@@ -121,7 +121,7 @@ class BlackList(commands.Cog):
             try:
                 int(subject_id)
             except ValueError:
-                raise AttributeError(f"'{subject_id}' is no valid number.")
+                raise RuntimeError(f"'{subject_id}' is no valid number.")
 
         if subject == "guild":
             guild = self.bot.get_guild(int(subject_id))
@@ -160,13 +160,13 @@ class BlackList(commands.Cog):
             try:
                 self.add_ignore(subject_id, subject)
             except KeyError:
-                raise AttributeError(f"'{subject_id}' is no valid argument.")
+                raise RuntimeError(f"'{subject_id}' is no valid argument.")
             except ValueError:
-                raise AttributeError(f"'{subject}' is already part of the '{subject_id}' ignore list.")
+                raise RuntimeError(f"'{subject}' is already part of the '{subject_id}' ignore list.")
             await ctx.send(f"All {subject_id} will be ignored now.")
 
         else:
-            raise AttributeError(f"'{subject}' is no valid argument.")
+            raise RuntimeError(f"'{subject}' is no valid argument.")
 
     @commands.command()
     @commands.check(is_owner)
@@ -209,7 +209,7 @@ class BlackList(commands.Cog):
             try:
                 int(subject_id)
             except ValueError:
-                raise AttributeError(f"'{subject_id}' is no valid number.")
+                raise RuntimeError(f"'{subject_id}' is no valid number.")
 
         if subject == "guild":
             guild = self.bot.get_guild(int(subject_id))
@@ -248,18 +248,18 @@ class BlackList(commands.Cog):
             try:
                 self.remove_ignore(subject_id, subject)
             except KeyError:
-                raise AttributeError(f"'{subject_id}' is no valid argument.")
+                raise RuntimeError(f"'{subject_id}' is no valid argument.")
             await ctx.send(f"{subject_id} will not be ignored anymore.")
 
         elif subject == "every":
             try:
                 self.remove_ignore(subject_id + "s", subject)
             except KeyError:
-                raise AttributeError(f"'{subject_id}' is no valid argument.")
+                raise RuntimeError(f"'{subject_id}' is no valid argument.")
             await ctx.send(f"Every {subject_id} was removed from the ignore list.")
 
         else:
-            raise AttributeError(f"'{subject}' is no valid argument.")
+            raise RuntimeError(f"'{subject}' is no valid argument.")
 
     @commands.command()
     @commands.check(is_owner)
