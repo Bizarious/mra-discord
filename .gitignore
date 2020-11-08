@@ -132,6 +132,7 @@ dmypy.json
 data/
 config/
 experiments/
+custom_extensions/
 
 .idea
 
