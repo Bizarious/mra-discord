@@ -6,25 +6,17 @@ class MessageParser:
             self.privacy = "private"
             self.message = ""
 
-    def parse(self, msg: str, bot) -> Context:
+    def parse(self, msg: str, msg_args: str) -> Context:
         ctx = self.Context()
         message = msg
-        args = ""
-        if message.startswith("<"):
-            for s in message:
-                args += s
-                if s == ">":
-                    break
-        message = message[len(args):]
-        args = (args[1:-1]).split(",")
-        for a in args:
-            if a == "p":
+        msg_args = msg_args.split(",")
+
+        for s in msg_args:
+            if s == "p":
                 ctx.privacy = "public"
-            elif ":" in a:
-                buffer = a.split(":")
-                if buffer[0] == "m":
-                    user = bot.get_user(int(buffer[1]))
-                    message = user.mention + " " + message
+            elif s.startswith("m:"):
+                s = s.split(":")
+                message = f"<@{s[1]}> {message}"
 
         ctx.message = message
         return ctx
@@ -32,4 +24,4 @@ class MessageParser:
 
 if __name__ == "__main__":
     m = MessageParser()
-    m.parse("<p,s,c,m:Max>Hallo Welt", "")
+    m.parse("Hallo Welt", "p,s,c,m:123")

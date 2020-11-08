@@ -48,7 +48,7 @@ class BotClient(commands.Bot):
     async def parse_commands(self, pkt):
         if pkt is not None:
             if pkt.cmd == "send":
-                ctx = self.parser.parse(pkt.message, self)
+                ctx = self.parser.parse(pkt.message, pkt.message_args)
                 try:
                     if ctx.privacy == "public" and hasattr(pkt, "channel_id"):
                         if pkt.channel_id is not None:
@@ -94,7 +94,7 @@ class BotClient(commands.Bot):
     async def on_command_error(self, ctx, exception):
         try:
             if isinstance(exception, commands.errors.CheckFailure):
-                await ctx.send("No Permissions")
+                await ctx.send("You have not the permissions to issue this command.")
             elif isinstance(exception, commands.CommandInvokeError):
                 if isinstance(exception.original, discord.Forbidden):
                     await ctx.send("I am not allowed to do that")
