@@ -24,6 +24,8 @@ class Main:
         self.task_manager = TaskManager(self.data, self.ipc)
 
     def run(self):
+        self.global_config.set_default_config("restartOnErrorTimer", "120")
+        timer = int(self.global_config.get_config("restartOnErrorTimer"))
         self.task_manager.start()
         try:
             self.bot.run(self.bot_token, reconnect=True)
@@ -32,7 +34,7 @@ class Main:
             try:
                 print("Cannot connect to discord. Restarting.")
                 self.bot.restart = True
-                time.sleep(5)
+                time.sleep(timer)
 
             except KeyboardInterrupt:
                 return
