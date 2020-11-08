@@ -1,6 +1,7 @@
 from croniter import croniter as cr
 from datetime import datetime as dt, timedelta as td
 from abc import ABC, abstractmethod
+from copy import deepcopy
 from core.enums import Dates
 from core.task.task_exceptions import TaskCreationError
 
@@ -29,10 +30,6 @@ class Task(ABC):
         return self._creation_time
 
     @property
-    def creation_time_string(self) -> str:
-        return self._creation_time.strftime(Dates.DATE_FORMAT.value)
-
-    @property
     def name(self) -> str:
         return self._name
 
@@ -40,12 +37,15 @@ class Task(ABC):
     def name(self, name: str):
         self._name = name
 
+    def creation_time_string(self, format_string: str) -> str:
+        return self._creation_time.strftime(format_string)
+
     @abstractmethod
-    def to_json(self) -> dict:
+    def to_json(self, format_string: str) -> dict:
         pass
 
     def from_json(self, kwargs: dict):
-        self._creation_time = dt.strptime(kwargs["extra"]["creation_time"], Dates.DATE_FORMAT.value)
+        self._creation_time = dt.strptime(kwargs["extra"]["creation_time"], Dates.DATE_FORMAT_DETAIL.value)
         self.name = kwargs["extra"]["type"]
 
     @abstractmethod
@@ -90,7 +90,7 @@ class TimeBasedTask(Task, ABC):
                     self.time.append(buffer)
                     buffer = ""
 
-        self._next_time = self.creation_time
+        self._next_time = deepcopy(self.creation_time)
 
         # flags
         self.delete = False
@@ -127,9 +127,8 @@ class TimeBasedTask(Task, ABC):
     def next_time(self) -> dt:
         return self._next_time
 
-    @property
-    def nex_time_string(self) -> str:
-        return self._next_time.strftime(Dates.DATE_FORMAT.value)
+    def nex_time_string(self, format_string: str) -> str:
+        return self._next_time.strftime(format_string)
 
     def calc_counter(self):
         if self.counter > 0:
@@ -137,11 +136,11 @@ class TimeBasedTask(Task, ABC):
         if self.counter == 0:
             self.delete = True
 
-    def to_json(self) -> dict:
+    def to_json(self, format_string: str) -> dict:
         return {"basic": self.kwargs,
                 "extra": {"type": self.name,
-                          "creation_time": self.creation_time_string,
-                          "next_time": self.nex_time_string,
+                          "creation_time": self.creation_time_string(format_string),
+                          "next_time": self.nex_time_string(Dates.DATE_FORMAT.value),
                           "delete": self.delete,
                           "label": self.label,
                           "counter": self.counter

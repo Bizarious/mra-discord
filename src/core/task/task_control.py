@@ -94,13 +94,15 @@ class TaskManager(Process):
     def import_tasks(self, tasks: list):
         for t in tasks:
             self.add_task_from_dict(t)
+        print(self.task_queue.queue)
         self.set_next_date()
 
     def export_tasks(self):
         tasks = []
         for v in self.tasks.values():
+            t: tk.TimeBasedTask
             for t in v:
-                tasks.append(t.to_json())
+                tasks.append(t.to_json(Dates.DATE_FORMAT_DETAIL.value))
         return tasks
 
     def add_task(self, pkt):
@@ -151,6 +153,12 @@ class TaskManager(Process):
         del tsk
         self.set_next_date()
 
+    def delete_all_tasks(self, uid: int):
+        for t in self.tasks[uid]:
+            self.delete_task_from_queue(t)
+        self.tasks[uid] = []
+        self.data.set_json(file="tasks", data=self.export_tasks())
+
     def get_task(self, task_id: int, author_id: int) -> tk.Task:
         if author_id not in self.tasks.keys():
             raise UserHasNoTasksException("No active tasks")
@@ -167,7 +175,7 @@ class TaskManager(Process):
             raise UserHasNoTasksException("No active tasks")
         tasks = []
         for t in self.tasks[author_id]:
-            tasks.append(t.to_json())
+            tasks.append(t.to_json(Dates.DATE_FORMAT.value))
         return tasks
 
     def set_next_date(self):
@@ -216,8 +224,11 @@ class TaskManager(Process):
                     tasks = self.get_tasks(pkt.author_id)
                     pkt.pipe.send(tasks)
                 elif pkt.cmd == "del_task":
-                    tsk = self.get_task(int(pkt.task_id) - 1, pkt.author_id)
-                    self.delete_task(tsk)
+                    if pkt.task_id == "all":
+                        self.delete_all_tasks(pkt.author_id)
+                    else:
+                        tsk = self.get_task(int(pkt.task_id) - 1, pkt.author_id)
+                        self.delete_task(tsk)
                     pkt.pipe.send(None)
             except Exception as e:
                 if pkt.pipe is not None:
