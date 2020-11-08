@@ -17,7 +17,8 @@ class ExtensionHandler(commands.Cog, name="Extension Handler"):
         self.bot = bot
         self.config: ConfigManager = self.bot.config
         self.config.set_default_config("loadCogs", "none")
-        self.paths = {"./extensions": "extensions"}
+        self.paths = {"./extensions": "extensions",
+                      "./custom_extensions": "custom_extensions"}
         self.loaded_cogs = {}
 
         self.load_base_ext()
