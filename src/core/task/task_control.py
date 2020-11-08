@@ -94,7 +94,6 @@ class TaskManager(Process):
     def import_tasks(self, tasks: list):
         for t in tasks:
             self.add_task_from_dict(t)
-        print(self.task_queue.queue)
         self.set_next_date()
 
     def export_tasks(self):
