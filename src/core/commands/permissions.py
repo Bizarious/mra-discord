@@ -7,7 +7,6 @@ class PermissionsHandler(commands.Cog, name="Permissions Handler"):
     def __init__(self, bot):
         self.bot = bot
         self.permissions: Permissions = self.bot.permit
-        self.permissions.add_group("Test1")
 
     def check_default_users(self, uid: int):
         self.permissions.add_to_default_groups(uid)
@@ -32,7 +31,7 @@ class PermissionsHandler(commands.Cog, name="Permissions Handler"):
             raise AttributeError(f"'{uid}' is no valid number.")
         if int(uid) not in self.permissions.known_users:
             raise GroupUserException(f"The user of the id '{uid}' is not known.")
-        if int(uid) == ctx.author.id:
+        if int(uid) == ctx.author.id and not is_owner(ctx):
             raise GroupUserException(f"You cannot add yourself to a group.")
 
         self.permissions.add_to_group(int(uid), group)
@@ -58,7 +57,7 @@ class PermissionsHandler(commands.Cog, name="Permissions Handler"):
             raise AttributeError(f"'{uid}' is no valid number.")
         if int(uid) not in self.permissions.known_users:
             raise GroupUserException(f"The user of the id '{uid}' is not known.")
-        if int(uid) == ctx.author.id:
+        if int(uid) == ctx.author.id and not is_owner(ctx):
             raise GroupUserException(f"You cannot remove yourself from a group.")
 
         self.permissions.remove_from_group(int(uid), group)

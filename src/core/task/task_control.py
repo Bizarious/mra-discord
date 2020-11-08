@@ -40,7 +40,8 @@ class TaskExecutor(Thread):
                                   author_id=self.task.author_id,
                                   channel_id=self.task.channel_id,
                                   cmd=message[0],
-                                  message=message[1])
+                                  message=message[1],
+                                  message_args=message[2])
 
         self.manager.running_tasks_lock.acquire()
         self.manager.running_tasks.remove(self)
@@ -224,7 +225,8 @@ class TaskManager(Process):
                 else:
                     self.ipc.send(dst="bot", package=pkt,
                                   cmd="send",
-                                  message=f"<p>An error occurred in the Task Manager: {e}")
+                                  message=f"An error occurred in the Task Manager: {e}",
+                                  message_args="p")
 
         return None
 

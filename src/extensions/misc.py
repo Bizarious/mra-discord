@@ -47,10 +47,11 @@ class Misc(commands.Cog):
                     await asyncio.sleep(0.2)
 
     @commands.command("rmdme")
-    @commands.check_any(commands.check(is_owner), commands.check(is_group_member("task")))
-    async def remind_me(self, ctx, date_string, message, label=None, number=0):
+    @commands.check_any(commands.check(is_owner),
+                        commands.check(is_group_member("task")))
+    async def remind_me(self, ctx, date_string, message, message_args="", label=None, number=0):
         """
-        Adds a reminder-task.
+        Adds a reminder task.
 
         message:
             The message to display.
@@ -64,15 +65,21 @@ class Misc(commands.Cog):
             int(number)
         except ValueError:
             raise AttributeError(f"'{number}' is no valid number")
+        if message_args != "":
+            if not is_group_member("taskExtra")(ctx) and not is_owner(ctx):
+                raise PermissionError("You are not allowed to use special message arguments.")
+
         if label is None:
             label = message
         t = self.bot.ipc.pack(author_id=ctx.message.author.id,
                               channel_id=ctx.message.channel.id,
                               message=message,
+                              message_args=message_args,
                               date_string=date_string,
                               label=label,
                               number=int(number)
                               )
+
         self.bot.ipc.send(dst="task",
                           package=t, cmd="task",
                           task="Reminder",

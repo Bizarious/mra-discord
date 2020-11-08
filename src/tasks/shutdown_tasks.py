@@ -14,4 +14,4 @@ class ShutdownTask(TimeBasedTask):
         self.mode = mode
 
     def run(self):
-        return self.mode, None
+        return self.mode, None, None

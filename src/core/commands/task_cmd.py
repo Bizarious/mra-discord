@@ -7,6 +7,7 @@ class Tasks(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.bot.permit.add_group("task", True)
+        self.bot.permit.add_group("taskExtra", False)
 
     @commands.command()
     async def gt(self, ctx, a_id=None):
@@ -82,10 +83,16 @@ class Tasks(commands.Cog):
             Possibility 2: Can be a cronjob like string of the form "* * * * *", with the stars being
                 minutes, hours, days, months and weekdays respectively.
 
+        message_args:
+
+            Special arguments for sending messages.
+
         label:
+
             Sets a label for this task for easier recognition.
 
         number:
+
             Number of times the task shall be executed.
             -1: Infinite amount of times
             > 0: Finite amount of times
