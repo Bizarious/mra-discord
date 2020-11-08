@@ -2,7 +2,7 @@ from croniter import croniter as cr
 from datetime import datetime as dt, timedelta as td
 from abc import ABC, abstractmethod
 from core.enums import Dates
-from .task_exceptions import TaskCreationError
+from core.task.task_exceptions import TaskCreationError
 
 
 class Task(ABC):
@@ -58,14 +58,22 @@ class TimeBasedTask(Task, ABC):
     def __init__(self, *, author_id: int,
                  channel_id: int = None,
                  server_id: int = None,
-                 date_string: str = "* * * * *", label: str = None, number: int = 0):
+                 date_string: str = "* * * * *",
+                 label: str = None,
+                 number: int = 0,
+                 min_interval=0,
+                 ):
+
         Task.__init__(self, author_id=author_id,
                       channel_id=channel_id,
                       server_id=server_id,
-                      label=label)
+                      label=label
+                      )
 
         self.time = []  # empty, if date string is not of form "* * * * *"
         self.date_string = date_string
+        self.min_interval = min_interval
+
         if number == 0:
             self.counter = -1
         else:
@@ -82,7 +90,7 @@ class TimeBasedTask(Task, ABC):
                     self.time.append(buffer)
                     buffer = ""
 
-        self._next_time = None
+        self._next_time = self.creation_time
 
         # flags
         self.delete = False
@@ -91,11 +99,15 @@ class TimeBasedTask(Task, ABC):
 
     def get_next_date(self) -> dt:
         if len(self.time) == 0:
-            if self.counter == 0:
-                self.delete = True
-            dates = cr(self.date_string, dt.now())
+
+            old_next_time = self.next_time
+            dates = cr(self.date_string, self.next_time)
             self._next_time = dates.get_next(dt)
+            while ((self._next_time - old_next_time).seconds / 60) < self.min_interval:
+                self._next_time = dates.get_next(dt)
+
         else:
+
             hours = 0
             minutes = 0
             seconds = 0
@@ -108,6 +120,7 @@ class TimeBasedTask(Task, ABC):
                     seconds = int(time[:-1])
             delta = td(hours=hours, minutes=minutes, seconds=seconds)
             self._next_time = dt.now().replace(microsecond=0) + delta
+
         return self.next_time
 
     @property
@@ -150,5 +163,7 @@ class TimeBasedTask(Task, ABC):
 
 
 if __name__ == "__main__":
-    t = TimeBasedTask(author_id=1)
-    print(t.get_next_date())
+    t = TimeBasedTask(author_id=1, min_interval=10, date_string="*/10 * * * *")
+    print(t.next_time)
+    for _ in range(10):
+        print(t.get_next_date())
