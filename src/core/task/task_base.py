@@ -79,6 +79,8 @@ class TimeBasedTask(Task, ABC):
         else:
             self.counter = number
         if " " not in date_string:
+            if "0" in date_string:
+                raise TaskCreationError("'0' is not allowed.")
             self.counter = number
             for c in ["h", "m", "s"]:
                 if date_string.count(c) > 1:
@@ -90,24 +92,31 @@ class TimeBasedTask(Task, ABC):
                     self.time.append(buffer)
                     buffer = ""
 
-        self._next_time = deepcopy(self.creation_time)
+        self._next_time = deepcopy(self.creation_time.replace(microsecond=0))
 
         # flags
         self.delete = False
 
+        # next date is calculated to check if date strings are right
         self.get_next_date()
 
-    def get_next_date(self) -> dt:
+    def get_next_date(self, start: dt = None) -> dt:
         if len(self.time) == 0:
 
-            old_next_time = self.next_time
-            dates = cr(self.date_string, self.next_time)
+            # "* * * * *"
+            if start is None:
+                next_time = self.next_time
+            else:
+                next_time = start
+            old_next_time = next_time
+            dates = cr(self.date_string, next_time)
             self._next_time = dates.get_next(dt)
             while ((self._next_time - old_next_time).seconds / 60) < self.min_interval:
                 self._next_time = dates.get_next(dt)
 
         else:
 
+            # "1h"
             hours = 0
             minutes = 0
             seconds = 0
@@ -119,7 +128,10 @@ class TimeBasedTask(Task, ABC):
                 if "s" in time:
                     seconds = int(time[:-1])
             delta = td(hours=hours, minutes=minutes, seconds=seconds)
-            self._next_time = dt.now().replace(microsecond=0) + delta
+            self._next_time = self.next_time + delta
+            if self.next_time < dt.now():
+                diff = delta % (dt.now() - self.next_time)
+                self._next_time = dt.now() + diff
 
         return self.next_time
 
@@ -162,7 +174,8 @@ class TimeBasedTask(Task, ABC):
 
 
 if __name__ == "__main__":
-    t = TimeBasedTask(author_id=1, min_interval=10, date_string="*/10 * * * *")
+    t = TimeBasedTask(author_id=1, min_interval=10, date_string="119m")
+    t._next_time = dt.now() - td(minutes=120)
     print(t.next_time)
     for _ in range(10):
         print(t.get_next_date())
