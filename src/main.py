@@ -32,7 +32,7 @@ class Main:
 
         except (ClientConnectorError, HTTPException):
             try:
-                print("Cannot connect to discord. Restarting.")
+                print(f"Cannot connect to discord. Restarting in {timer}s.")
                 self.bot.restart = True
                 time.sleep(timer)
 
