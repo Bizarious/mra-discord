@@ -68,6 +68,9 @@ class Misc(commands.Cog):
         if message_args != "":
             if not is_group_member("taskExtra")(ctx) and not is_owner(ctx):
                 raise PermissionError("You are not allowed to use special message arguments.")
+        if number != 0 and " " not in date_string:
+            if not is_group_member("taskExtra")(ctx) and not is_owner(ctx):
+                raise PermissionError("You are not allowed to give a custom number of executions.")
 
         if label is None:
             label = message
