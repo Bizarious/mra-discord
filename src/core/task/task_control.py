@@ -119,18 +119,23 @@ class TaskManager(Process):
         self.data.set_json(file="tasks", data=self.export_tasks())
 
     def add_task_from_dict(self, tsk_dict: dict):
+        # return, when task shall be deleted and next time is in the past
         if dt.now() > dt.strptime(tsk_dict["extra"]["next_time"], Dates.DATE_FORMAT.value) and \
                 tsk_dict["extra"]["delete"]:
             return
+
+        # author list is created
         if tsk_dict["basic"]["author_id"] not in self.tasks.keys():
             self.tasks[tsk_dict["basic"]["author_id"]] = []
+
+        # task is created
         tsk: tk.TimeBasedTask = self.task_dict[tsk_dict["extra"]["type"]](**tsk_dict["basic"])
         tsk.kwargs = tsk_dict["basic"]
-        tsk.from_json(tsk_dict)
-        if " " in tsk_dict["basic"]["date_string"]:
-            next_time = tsk.get_next_date()
-        else:
-            next_time = dt.strptime(tsk_dict["extra"]["next_time"], Dates.DATE_FORMAT.value)
+        tsk.from_json(tsk_dict)  # task gets dictionary with extra arguments
+
+        # next time is calculated
+        next_time = tsk.get_next_date(dt.now())
+
         self.tasks[tsk_dict["basic"]["author_id"]].append(tsk)
         self.task_queue.put((next_time, tsk.creation_time, tsk))
 
@@ -244,13 +249,17 @@ class TaskManager(Process):
         t: Thread
         for t in self.running_tasks:
             t.join()
+        self.data.set_json(file="tasks", data=self.export_tasks())  # tasks are saved
 
     def run(self):
-        pkt = self.ipc.check_queue_block("task")
-        if pkt.cmd == "stop":
+        try:
+            pkt = self.ipc.check_queue_block("task")
+            if pkt.cmd == "stop":
+                self.stop()
+                return
+            self.import_tasks(self.data.get_json(file="tasks"))
+        except KeyboardInterrupt:
             self.stop()
-            return
-        self.import_tasks(self.data.get_json(file="tasks"))
 
         try:
             while True:
@@ -260,6 +269,7 @@ class TaskManager(Process):
                     self.stop()
                     break
                 elif stop == "wait":
+                    self.data.set_json(file="tasks", data=self.export_tasks())
                     while not self.task_queue.empty():
                         self.task_queue.get()
                     self.tasks = {}
