@@ -2,6 +2,7 @@ from discord.ext import commands
 from core.permissions import is_owner
 from tabulate import tabulate as tab
 from core.database import Data, ConfigManager
+from core.bot import on_message_check
 from typing import Union
 
 
@@ -69,7 +70,8 @@ class BlackList(commands.Cog):
             self.permissions[real_subject].remove(subject_id)
         self.data.set_json(file="blacklist", data=self.permissions)
 
-    def check_ignored(self, message) -> bool:
+    @on_message_check
+    async def check_ignored(self, message) -> bool:
         a_id = message.author.id
         c = message.channel
         g = message.guild
@@ -317,9 +319,6 @@ class BlackList(commands.Cog):
                   "```"
 
         await ctx.send(message)
-
-    def on_message_check(self, message) -> bool:
-        return self.check_ignored(message)
 
 
 def setup(bot):

@@ -4,6 +4,7 @@ from core.permissions import is_owner
 from core.system import measure_temp
 from core.database import ConfigManager
 from core.database.errors import ConfigNotExistentError
+from core.bot import handle_ipc_commands
 
 
 class System(commands.Cog):
@@ -117,14 +118,14 @@ class System(commands.Cog):
         else:
             await ctx.send(f'{temp} °C')
 
-    async def parse_commands(self, pkt) -> bool:
+    @handle_ipc_commands("shutdown", "restart")
+    async def parse_commands(self, pkt):
+        print(self)
+        print(pkt)
         if pkt.cmd == "shutdown":
             await self.bot.shutdown()
-            return False
         elif pkt.cmd == "restart":
             await self.bot.do_restart()
-            return False
-        return True
         
 
 def setup(bot):
