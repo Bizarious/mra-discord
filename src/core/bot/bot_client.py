@@ -5,8 +5,19 @@ from discord.ext import commands, tasks
 from core.permissions import Permissions
 from core.database import Data, ConfigManager
 from core.system import IPC
-from .message_parser import MessageParser
+from core.containers import FctContainer
+from core.bot.message_parser import MessageParser
 from datetime import datetime as dt
+
+
+def on_message_check(fct):
+    return FctContainer(fct, "on_message")
+
+
+def handle_ipc_commands(*args):
+    def dec(fct):
+        return FctContainer(fct, "parse_commands", *args)
+    return dec
 
 
 class BotClient(commands.Bot):
@@ -32,7 +43,8 @@ class BotClient(commands.Bot):
         self.parser = MessageParser()
 
         self.limit_cmd_processing = []
-        self.cmd_parsers = []
+        self.cmd_parsers = {}   # contains functions + command strings
+        self.cmd_parsers_mapping = {}   # contains command strings + cog names
 
         # flags
         self.restart = False
@@ -60,12 +72,9 @@ class BotClient(commands.Bot):
                 except Exception as e:
                     print(e)
             else:
-                for i in self.cmd_parsers:
-                    result = await i[0](pkt)
-                    if not isinstance(result, bool):
-                        raise CmdParserException("Your function must return a bool")
-                    if not result:
-                        return
+                fct = self.cmd_parsers[pkt.cmd][0]
+                cog = self.cmd_parsers[pkt.cmd][1]
+                await fct(cog, pkt)
 
     # Events
     async def on_ready(self):
@@ -78,10 +87,13 @@ class BotClient(commands.Bot):
         self.background_loop.start()
         print("online")
 
+    async def on_disconnect(self):
+        self.background_loop.cancel()
+
     async def on_message(self, message):
         limits = []
         for limit in self.limit_cmd_processing:
-            result = limit[0](message)
+            result = await limit[0](limit[1], message)
             if not isinstance(result, bool):
                 raise OnMessageCheckException("Your function must return a bool")
             limits.append(result)
@@ -139,33 +151,49 @@ class BotClient(commands.Bot):
     def register_cog_handler(self):
         self.load_extension("core.commands.extension_handler")
 
-    def add_limit(self, fct, name: str):
-        self.limit_cmd_processing.append((fct, name))
+    def add_limit(self, fct, cog,):
+        self.limit_cmd_processing.append((fct, cog, cog.__cog_name__))
 
     def remove_limit(self, name: str):
         for i in range(len(self.limit_cmd_processing)):
-            if self.limit_cmd_processing[i][1] == name:
+            if self.limit_cmd_processing[i][2] == name:
                 self.limit_cmd_processing.remove(self.limit_cmd_processing[i])
 
-    def add_command_parser(self, fct, name: str):
-        self.cmd_parsers.append((fct, name))
+    def add_command_parser(self, fct, cog, *cmd: str):
+        name = cog.__cog_name__
+        for c in cmd:
+            if c in self.cmd_parsers.keys():
+                raise CmdParserException(f"The command '{c}' exists already.")
+        if name not in self.cmd_parsers_mapping.keys():
+            self.cmd_parsers_mapping[name] = []
+        for c in cmd:
+            self.cmd_parsers[c] = (fct, cog)
+            self.cmd_parsers_mapping[name].append(c)
 
     def remove_command_parser(self, name: str):
-        for i in range(len(self.cmd_parsers)):
-            if self.cmd_parsers[i][1] == name:
-                self.cmd_parsers.remove(self.limit_cmd_processing[i])
+        if name in self.cmd_parsers_mapping.keys():
+            cmd = self.cmd_parsers_mapping[name]
+            for c in cmd:
+                del self.cmd_parsers[c]
+            del self.cmd_parsers_mapping[name]
+
+    def add_internal_checks(self, cog):
+        for f in dir(cog):
+            c = getattr(cog, f)
+            if isinstance(c, FctContainer):
+                if c.fct_add == "on_message":
+                    self.add_limit(c.fct, cog)
+                elif c.fct_add == "parse_commands":
+                    self.add_command_parser(c.fct, cog, *c.args)
 
     def add_cog(self, cog):
         commands.Bot.add_cog(self, cog)
-        if hasattr(cog, "on_message_check"):
-            self.add_limit(cog.on_message_check, cog.__cog_name__)
-        if hasattr(cog, "parse_commands"):
-            self.add_command_parser(cog.parse_commands, cog.__cog_name__)
+        self.add_internal_checks(cog)
 
     def remove_cog(self, name: str):
+        commands.Bot.remove_cog(self, name)
         self.remove_limit(name)
         self.remove_command_parser(name)
-        commands.Bot.remove_cog(self, name)
 
     def get_guild_id(self, name: str) -> Union[int, None]:
         for g in self.guilds:
