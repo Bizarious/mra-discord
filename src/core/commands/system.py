@@ -120,8 +120,6 @@ class System(commands.Cog):
 
     @handle_ipc_commands("shutdown", "restart")
     async def parse_commands(self, pkt):
-        print(self)
-        print(pkt)
         if pkt.cmd == "shutdown":
             await self.bot.shutdown()
         elif pkt.cmd == "restart":
