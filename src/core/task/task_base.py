@@ -1,4 +1,4 @@
-from croniter import croniter as cr
+from croniter import croniter as cr, CroniterBadCronError
 from datetime import datetime as dt, timedelta as td
 from abc import ABC, abstractmethod
 from copy import deepcopy
@@ -98,7 +98,10 @@ class TimeBasedTask(Task, ABC):
         self.delete = False
 
         # next date is calculated to check if date strings are right
-        self.get_next_date()
+        try:
+            self.get_next_date()
+        except CroniterBadCronError:
+            raise TaskCreationError("Bad date string")
 
     def get_next_date(self, start: dt = None) -> dt:
         if len(self.time) == 0:
