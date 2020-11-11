@@ -134,8 +134,10 @@ class TaskManager(Process):
         tsk.from_json(tsk_dict)  # task gets dictionary with extra arguments
 
         # next time is calculated
-        next_time = tsk.get_next_date(dt.now())
-
+        if dt.now() >= tsk.next_time:
+            next_time = tsk.get_next_date(dt.now())
+        else:
+            next_time = tsk.next_time
         self.tasks[tsk_dict["basic"]["author_id"]].append(tsk)
         self.task_queue.put((next_time, tsk.creation_time, tsk))
 
@@ -162,6 +164,7 @@ class TaskManager(Process):
             self.delete_task_from_queue(t)
         self.tasks[uid] = []
         self.data.set_json(file="tasks", data=self.export_tasks())
+        self.set_next_date()
 
     def get_task(self, task_id: int, author_id: int) -> tk.Task:
         if author_id not in self.tasks.keys():
