@@ -116,6 +116,7 @@ class TaskManager(Process):
         tsk.calc_counter()
         self.task_queue.put((tsk.next_time, tsk.creation_time, tsk))  # task is added to queue
         self.tasks[pkt.author_id].append(tsk)  # task is appended to author list
+        self.set_next_date()    # next time is calculated
         self.data.set_json(file="tasks", data=self.export_tasks())
 
     def add_task_from_dict(self, tsk_dict: dict):
@@ -226,7 +227,6 @@ class TaskManager(Process):
                     return "wait"
                 elif pkt.cmd == "task":
                     self.add_task(pkt)
-                    self.set_next_date()
                 elif pkt.cmd == "get_tasks":
                     tasks = self.get_tasks(pkt.author_id)
                     pkt.pipe.send(tasks)

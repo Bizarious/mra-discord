@@ -79,8 +79,6 @@ class TimeBasedTask(Task, ABC):
         else:
             self.counter = number
         if " " not in date_string:
-            if "0" in date_string:
-                raise TaskCreationError("'0' is not allowed.")
             self.counter = number
             for c in ["h", "m", "s"]:
                 if date_string.count(c) > 1:
@@ -91,6 +89,10 @@ class TimeBasedTask(Task, ABC):
                 if c in ["h", "m", "s"]:
                     self.time.append(buffer)
                     buffer = ""
+            for time in self.time:
+                n = int(time[:-1])
+                if n == 0:
+                    raise TaskCreationError("0 is not allowed")
 
         self._next_time = deepcopy(self.creation_time.replace(microsecond=0))
 
