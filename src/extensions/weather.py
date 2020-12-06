@@ -10,10 +10,7 @@ from core.permissions import is_owner, is_group_member
 
 def get_current_weather(city: str, token: str) -> dict:
     response = requests.get(f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={token}&units=metric")
-    r = response.json()
-    if r["cod"] == "404":
-        raise RuntimeError("Error in api call")
-    return r
+    return response.json()
 
 
 class Weather(commands.Cog):
@@ -46,6 +43,12 @@ class Weather(commands.Cog):
     async def weather(self, ctx, city):
         data_list: list = self.get_weather_data("current", city)
         data: dict = data_list[0]
+
+        if data["cod"] == 404:
+            raise RuntimeError("Error in api call")
+        elif data["cod"] == 401:
+            raise RuntimeError("Invalid API Key")
+
         update_time = dt.fromtimestamp(data_list[1]).strftime(Dates.DATE_FORMAT.value)
         wth = data["weather"]
         main = data["main"]
