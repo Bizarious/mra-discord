@@ -15,6 +15,7 @@ class Tasks(commands.Cog):
         Displays all active tasks.
 
         a_id:
+
             The id of the user. Leave it empty or set your id, to get your own messages.
             Set 0 to get system tasks.
         """
@@ -47,9 +48,11 @@ class Tasks(commands.Cog):
         Deletes a message.
 
         task_id:
+
             The id of the task that shall be deleted. Get ids with 'gt'.
 
         a_id:
+
             The id of the user. Leave it empty or set your id, to delete your own messages.
             Set 0 to delete system tasks.
         """
