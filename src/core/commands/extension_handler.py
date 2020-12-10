@@ -175,6 +175,18 @@ class ExtensionHandler(commands.Cog, name="Extension Handler"):
             self.bot.unload_extension(self.loaded_cogs[c])
         self.loaded_cogs = {}
 
+    @commands.command("los")
+    @commands.check(is_owner)
+    async def set_loaded_cogs_on_startup(self, _, *, cogs):
+        """
+        Choose, which cogs shall be loaded on startup.
+
+        cogs:
+
+            e.g. 'misc, weather'
+        """
+        self.config.set_config("loadCogs", "ExtensionHandler", cogs)
+
 
 def setup(bot):
     bot.add_cog(ExtensionHandler(bot))

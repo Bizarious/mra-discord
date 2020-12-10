@@ -3,7 +3,6 @@ from discord.ext import commands
 from core.permissions import is_owner
 from core.system import measure_temp
 from core.database import ConfigManager
-from core.database.errors import ConfigNotExistentError
 from core.bot import handle_ipc_commands
 
 
@@ -64,48 +63,6 @@ class System(commands.Cog):
         """
         self.bot.change_prefix(prefix, ctx.message.guild.id)
         await ctx.send(f'Changed prefix for server "{self.bot.get_guild(ctx.message.guild.id).name}" to "{prefix}"')
-
-    """""""""
-    @commands.command("config")
-    @commands.check(is_owner)
-    async def config_change(self, ctx, cmd, conf="", value=""):
-        
-        Manages bot and command configurations.
-
-        cmd:
-
-            status: Shows all existing configs and there values.
-            set: Modifies a config value.
-
-        conf:
-
-            The config to be modified.
-
-        value:
-
-            The value to be set.
-        
-        if cmd == "status":
-            s = "```\nAll existent configs:\n\n"
-            for c in self.config.configs.keys():
-                s += f"{c} = {self.config.configs[c]}\n"
-            s += "```"
-            await ctx.send(s)
-
-        elif cmd == "set":
-            if conf == "":
-                raise RuntimeError(f"Conf must not be empty")
-            if value == "":
-                raise RuntimeError(f"Value must not be empty")
-            try:
-                self.config.set_config(conf, value)
-            except ConfigNotExistentError:
-                await ctx.send(f"The config '{conf}' does not exist.")
-            else:
-                await ctx.send(f"Successfully changed '{conf}'. You may need to restart the bot.")
-        else:
-            await ctx.send(f"'{cmd}' is no valid argument.")
-    """""""""
 
     @commands.command()
     @commands.check(is_owner)

@@ -114,6 +114,17 @@ class PermissionsHandler(commands.Cog, name="Permissions Handler"):
 
         await ctx.send(result)
 
+    @commands.command("setowner")
+    @commands.check(is_owner)
+    async def set_bot_owner(self, ctx, uid):
+        """
+        Sets the bot owner.
+        """
+        if int(uid) not in self.permissions.known_users:
+            raise RuntimeError("This user is not known.")
+        self.permissions.bot_owner = uid
+        await ctx.send(f"Congratulations <@{uid}>, you are now the owner of this bot.")
+
     @commands.Cog.listener()
     async def on_ready(self):
         users = [u.id for u in self.bot.users if u != self.bot.user]
