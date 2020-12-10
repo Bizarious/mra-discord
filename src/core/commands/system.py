@@ -65,10 +65,11 @@ class System(commands.Cog):
         self.bot.change_prefix(prefix, ctx.message.guild.id)
         await ctx.send(f'Changed prefix for server "{self.bot.get_guild(ctx.message.guild.id).name}" to "{prefix}"')
 
+    """""""""
     @commands.command("config")
     @commands.check(is_owner)
     async def config_change(self, ctx, cmd, conf="", value=""):
-        """
+        
         Manages bot and command configurations.
 
         cmd:
@@ -83,7 +84,7 @@ class System(commands.Cog):
         value:
 
             The value to be set.
-        """
+        
         if cmd == "status":
             s = "```\nAll existent configs:\n\n"
             for c in self.config.configs.keys():
@@ -104,6 +105,7 @@ class System(commands.Cog):
                 await ctx.send(f"Successfully changed '{conf}'. You may need to restart the bot.")
         else:
             await ctx.send(f"'{cmd}' is no valid argument.")
+    """""""""
 
     @commands.command()
     @commands.check(is_owner)

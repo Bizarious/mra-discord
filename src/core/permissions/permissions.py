@@ -36,7 +36,7 @@ class Permissions:
 
     @property
     def bot_owner(self) -> int:
-        return int(self.config.get_config("botOwner"))
+        return int(self.config.get_config("botOwner", "General"))
 
     @property
     def known_users(self) -> list:

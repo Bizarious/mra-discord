@@ -16,14 +16,14 @@ class ExtensionHandler(commands.Cog, name="Extension Handler"):
     def __init__(self, bot):
         self.bot = bot
         self.config: ConfigManager = self.bot.config
-        self.config.set_default_config("loadCogs", "none")
+        self.config.set_default_config("loadCogs", "ExtensionHandler", "none")
         self.paths = {"./extensions": "extensions",
                       "./custom_extensions": "custom_extensions"}
         self.loaded_cogs = {}
 
         self.load_base_ext()
 
-        self.load_cogs = self.config.get_config("loadCogs")
+        self.load_cogs = self.config.get_config("loadCogs", "ExtensionHandler")
         self.load_extra_ext()
 
     def list_all_extensions(self) -> dict:

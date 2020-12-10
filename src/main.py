@@ -24,8 +24,8 @@ class Main:
         self.task_manager = TaskManager(self.data, self.ipc)
 
     def run(self):
-        self.global_config.set_default_config("restartOnErrorTimer", "120")
-        timer = int(self.global_config.get_config("restartOnErrorTimer"))
+        self.global_config.set_default_config("restartOnErrorTimer", "System", "120")
+        timer = float(self.global_config.get_config("restartOnErrorTimer", "System"))
         self.task_manager.start()
         try:
             self.bot.run(self.bot_token, reconnect=True)
@@ -44,7 +44,7 @@ class Main:
         self.task_manager.join()
 
         if self.bot.restart:
-            restart(sys.argv, float(self.global_config.get_config("restartTimer")))
+            restart(sys.argv, float(self.global_config.get_config("restartTimer", "System")))
         else:
             print("shutdown")
 
@@ -54,12 +54,12 @@ class Main:
             self.bot_token = input("\nBot Token: ")
             self.global_config.set_token("bot", self.bot_token)
 
-        bot_owner = self.global_config.get_config("botOwner")
+        bot_owner = self.global_config.get_config("botOwner", "General")
         if bot_owner is None:
             bot_owner = input("\nBot Owner ID: ")
-            self.global_config.set_default_config("botOwner", bot_owner)
+            self.global_config.set_default_config("botOwner", "General", bot_owner)
 
-        self.global_config.set_default_config("restartTimer", "2")
+        self.global_config.set_default_config("restartTimer", "System", "2")
 
 
 if __name__ == "__main__":

@@ -10,6 +10,7 @@ class BlackList(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
+        self.permit = self.bot.permit
         self.permission_needed = ["ignored_users",
                                   "ignored_guilds",
                                   "ignored_channels",
@@ -31,7 +32,7 @@ class BlackList(commands.Cog):
 
     @property
     def bot_owner(self) -> int:
-        return int(self.config.get_config("botOwner"))
+        return self.permit.bot_owner
 
     @property
     def ignored_users(self) -> list:
