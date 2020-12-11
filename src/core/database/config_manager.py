@@ -59,8 +59,12 @@ class ConfigManager(DataBasic):
         self._save_configs()
 
     def set_default_config(self, name: str, section: str, value: str):
+        changed = False
         if section not in self.configs:
             self.configs[section] = {}
+            changed = True
         if name not in self.configs[section]:
             self.configs[section][name] = value
-        self._save_configs()
+            changed = True
+        if changed:
+            self._save_configs()
