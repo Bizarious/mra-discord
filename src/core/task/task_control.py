@@ -11,7 +11,7 @@ from core.system import IPC
 import time
 from core.enums import Dates
 from .task_exceptions import UserHasNoTasksException, TaskIdDoesNotExistException, TaskCreationError
-from core.database import Data
+from core.database import Data, ConfigManager
 
 
 def task(name):
@@ -19,6 +19,37 @@ def task(name):
         return TaskContainer(task_class, name)
 
     return decorator
+
+
+class TaskLimiter:
+
+    def __init__(self, data: Data, config: ConfigManager):
+        self.data = data
+        self.config = config
+
+        self.config.set_default_config("taskLimit", "Tasks", "5")
+        self.config.set_default_config("applyTaskLimitToOwner", "Tasks", "True")
+
+        self.task_limit = int(self.config.get_config("taskLimit", "Tasks"))
+        self.limit_owner = bool(self.config.get_config("applyTaskLimitToOwner", "Tasks"))
+
+        self.limits = self.data.get_json(file="limits", path="tasks")
+
+    def reached_limit(self, uid: int, number: int):
+        if not self.limit_owner:
+            return False
+        if str(uid) in self.limits.keys():
+            if self.limits[str(uid)] <= number:
+                return True
+            return False
+        elif number >= self.task_limit:
+            return True
+        return False
+
+    def get_limit(self, uid: int):
+        if str(uid) in self.limits.keys():
+            return self.limits[str(uid)]
+        return self.task_limit
 
 
 class TaskExecutor(Thread):
@@ -50,8 +81,9 @@ class TaskExecutor(Thread):
 
 class TaskManager(Process):
 
-    def __init__(self, data, ipc: IPC):
+    def __init__(self, data: Data, config: ConfigManager, ipc: IPC):
         Process.__init__(self)
+
         # Queues
         self.task_queue = PriorityQueue()
         self.ipc = ipc
@@ -60,6 +92,8 @@ class TaskManager(Process):
 
         self.paths = {"./tasks": "tasks"}
         self.data: Data = data
+        self.config = config
+        self.task_limiter = TaskLimiter(self.data, self.config)
 
         self.tasks = {}  # author mapping
         self.task_dict = {}  # task classes
@@ -67,6 +101,12 @@ class TaskManager(Process):
         self.next_date = None
 
         self.register_all_tasks()
+
+    def load_tasks(self) -> list:
+        return self.data.get_json(file="tasks", path="tasks")
+
+    def save_tasks(self):
+        self.data.set_json(file="tasks", path="tasks", data=self.export_tasks())
 
     def register_task(self, module_path: str, file: str):
         task_module = importlib.import_module(f'{module_path}.{file}')
@@ -107,6 +147,9 @@ class TaskManager(Process):
     def add_task(self, pkt):
         if pkt.author_id not in self.tasks.keys():
             self.tasks[pkt.author_id] = []  # author id in task list
+        if self.task_limiter.reached_limit(pkt.author_id, len(self.tasks[pkt.author_id])):
+            limit = self.task_limiter.get_limit(pkt.author_id)
+            raise RuntimeError(f"You have already reached your task limit ({limit}).")
         try:
             tsk: tk.TimeBasedTask = self.task_dict[pkt.task](**pkt.kwargs)  # task creation
         except Exception as e:
@@ -117,7 +160,7 @@ class TaskManager(Process):
         self.task_queue.put((tsk.next_time, tsk.creation_time, tsk))  # task is added to queue
         self.tasks[pkt.author_id].append(tsk)  # task is appended to author list
         self.set_next_date()    # next time is calculated
-        self.data.set_json(file="tasks", data=self.export_tasks())
+        self.save_tasks()
 
     def add_task_from_dict(self, tsk_dict: dict):
         # return, when task shall be deleted and next time is in the past
@@ -145,7 +188,7 @@ class TaskManager(Process):
     def delete_task_from_mapping(self, tsk: tk.Task):
         author_id = tsk.author_id
         self.tasks[author_id].remove(tsk)
-        self.data.set_json(file="tasks", data=self.export_tasks())
+        self.save_tasks()
 
     def delete_task_from_queue(self, tsk: tk.Task):
         for t in self.task_queue.queue:
@@ -164,7 +207,7 @@ class TaskManager(Process):
         for t in self.tasks[uid]:
             self.delete_task_from_queue(t)
         self.tasks[uid] = []
-        self.data.set_json(file="tasks", data=self.export_tasks())
+        self.save_tasks()
         self.set_next_date()
 
     def get_task(self, task_id: int, author_id: int) -> tk.Task:
@@ -252,7 +295,7 @@ class TaskManager(Process):
         t: Thread
         for t in self.running_tasks:
             t.join()
-        self.data.set_json(file="tasks", data=self.export_tasks())  # tasks are saved
+        self.save_tasks()  # tasks are saved
 
     def run(self):
         try:
@@ -260,7 +303,7 @@ class TaskManager(Process):
             if pkt.cmd == "stop":
                 self.stop()
                 return
-            self.import_tasks(self.data.get_json(file="tasks"))
+            self.import_tasks(self.load_tasks())
         except KeyboardInterrupt:
             self.stop()
 
@@ -272,12 +315,12 @@ class TaskManager(Process):
                     self.stop()
                     break
                 elif stop == "wait":
-                    self.data.set_json(file="tasks", data=self.export_tasks())
+                    self.save_tasks()
                     while not self.task_queue.empty():
                         self.task_queue.get()
                     self.tasks = {}
                     self.ipc.check_queue_block("task")
-                    self.import_tasks(self.data.get_json(file="tasks"))
+                    self.import_tasks(self.load_tasks())
                 self.tasks_loop()
                 time.sleep(0.2)
         except KeyboardInterrupt:

@@ -21,7 +21,7 @@ class Main:
         self.ipc.create_queues("bot", "task")
 
         self.bot = BotClient(self.data, self.global_config, self.ipc)
-        self.task_manager = TaskManager(self.data, self.ipc)
+        self.task_manager = TaskManager(self.data, self.global_config, self.ipc)
 
     def run(self):
         self.global_config.set_default_config("restartOnErrorTimer", "System", "120")
