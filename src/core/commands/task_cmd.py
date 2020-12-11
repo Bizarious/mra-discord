@@ -29,13 +29,16 @@ class Tasks(commands.Cog):
                                  create_pipe=True,
                                  package=t, cmd="get_tasks",
                                  author_id=author_id)
+        timeout = pipe.poll(2)
+        if not timeout:
+            raise RuntimeError("The task manager did not answer. There must be a problem.")
         tasks = pipe.recv()
         if isinstance(tasks, Exception):
             raise tasks
         headers = ["ID", "Type", "Label", "Creation Date", "Next Execution Date"]
         table = []
         for i in range(len(tasks)):
-            table.append([i+1,
+            table.append([i + 1,
                           tasks[i]["extra"]["type"],
                           tasks[i]["extra"]["label"],
                           tasks[i]["extra"]["creation_time"],
@@ -80,6 +83,78 @@ class Tasks(commands.Cog):
                                  cmd="del_task",
                                  author_id=author_id,
                                  task_id=task_id)
+        timeout = pipe.poll(2)
+        if not timeout:
+            raise RuntimeError("The task manager did not answer. There must be a problem.")
+        answer = pipe.recv()
+        if isinstance(answer, Exception):
+            raise answer
+
+    @commands.command("addlimit")
+    @commands.check(is_owner)
+    async def add_limit(self, _, uid, value):
+        """
+        Adds/edits the task limit of an user.
+
+        uid:
+
+            The user's id.
+
+        value:
+
+            The limit. -1 for no limit.
+        """
+        try:
+            int(uid)
+        except ValueError:
+            raise RuntimeError(f"{uid} is no valid number.")
+        try:
+            int(value)
+        except ValueError:
+            raise RuntimeError(f"{value} is no valid number.")
+
+        t = self.bot.ipc.pack()
+        pipe = self.bot.ipc.send(dst="task",
+                                 create_pipe=True,
+                                 package=t,
+                                 cmd="add_limit",
+                                 subject_id=int(uid),
+                                 limit=int(value)
+                                 )
+
+        timeout = pipe.poll(2)
+        if not timeout:
+            raise RuntimeError("The task manager did not answer. There must be a problem.")
+        answer = pipe.recv()
+        if isinstance(answer, Exception):
+            raise answer
+
+    @commands.command("rmlimit")
+    @commands.check(is_owner)
+    async def remove_limit(self, _, uid):
+        """
+        Removes the task limit of an user.
+
+        uid:
+
+            The user's id.
+        """
+        try:
+            int(uid)
+        except ValueError:
+            raise RuntimeError(f"{uid} is no valid number.")
+
+        t = self.bot.ipc.pack()
+        pipe = self.bot.ipc.send(dst="task",
+                                 create_pipe=True,
+                                 package=t,
+                                 cmd="remove_limit",
+                                 subject_id=int(uid),
+                                 )
+
+        timeout = pipe.poll(2)
+        if not timeout:
+            raise RuntimeError("The task manager did not answer. There must be a problem.")
         answer = pipe.recv()
         if isinstance(answer, Exception):
             raise answer

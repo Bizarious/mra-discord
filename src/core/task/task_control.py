@@ -31,16 +31,24 @@ class TaskLimiter:
         self.config.set_default_config("applyTaskLimitToOwner", "Tasks", "True")
 
         self.task_limit = int(self.config.get_config("taskLimit", "Tasks"))
-        self.limit_owner = bool(self.config.get_config("applyTaskLimitToOwner", "Tasks"))
+        self.limit_owner = self.config.get_config("applyTaskLimitToOwner", "Tasks")
+        self.bot_owner = int(self.config.get_config("botOwner", "General"))
 
         self.limits = self.data.get_json(file="limits", path="tasks")
 
     def reached_limit(self, uid: int, number: int):
-        if not self.limit_owner:
+        print(self.limit_owner)
+        if self.limit_owner == "False" and uid == self.bot_owner:
             return False
-        if str(uid) in self.limits.keys():
-            if self.limits[str(uid)] <= number:
+        elif str(uid) in self.limits.keys():
+
+            # -1: no limit
+            if self.limits[str(uid)] == -1:
+                return False
+            elif self.limits[str(uid)] <= number:
                 return True
+            return False
+        elif self.task_limit == -1:
             return False
         elif number >= self.task_limit:
             return True
@@ -50,6 +58,14 @@ class TaskLimiter:
         if str(uid) in self.limits.keys():
             return self.limits[str(uid)]
         return self.task_limit
+
+    def add_limit(self, uid: int, value: int):
+        self.limits[str(uid)] = value
+        self.data.set_json(file="limits", path="tasks", data=self.limits)
+
+    def remove_limit(self, uid: int):
+        del self.limits[str(uid)]
+        self.data.set_json(file="limits", path="tasks", data=self.limits)
 
 
 class TaskExecutor(Thread):
@@ -279,6 +295,12 @@ class TaskManager(Process):
                     else:
                         tsk = self.get_task(int(pkt.task_id) - 1, pkt.author_id)
                         self.delete_task(tsk)
+                    pkt.pipe.send(None)
+                elif pkt.cmd == "add_limit":
+                    self.task_limiter.add_limit(pkt.subject_id, pkt.limit)
+                    pkt.pipe.send(None)
+                elif pkt.cmd == "remove_limit":
+                    self.task_limiter.remove_limit(pkt.subject_id)
                     pkt.pipe.send(None)
             except Exception as e:
                 if pkt.pipe is not None:
