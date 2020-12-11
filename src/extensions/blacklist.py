@@ -15,7 +15,9 @@ class BlackList(commands.Cog):
                                   "ignored_guilds",
                                   "ignored_channels",
                                   "ignored_dms",
+                                  "ignored_bots",
                                   "blacklist"]
+
         self.data: Data = self.bot.data
         self.config: ConfigManager = self.bot.config
         self.permissions = self.data.get_json(file="blacklist")
@@ -51,6 +53,10 @@ class BlackList(commands.Cog):
         return self.permissions["ignored_dms"]
 
     @property
+    def ignored_bots(self) -> list:
+        return self.permissions["ignored_bots"]
+
+    @property
     def blacklist(self) -> list:
         return self.permissions["blacklist"]
 
@@ -76,9 +82,13 @@ class BlackList(commands.Cog):
         a_id = message.author.id
         c = message.channel
         g = message.guild
+        bot = message.author.bot
+
         if self.bot_owner == a_id:
             return True
-        if a_id not in self.ignored_users and "all" not in self.ignored_users:
+        elif bot and "all" in self.ignored_bots:
+            return False
+        elif a_id not in self.ignored_users and "all" not in self.ignored_users:
             if g is not None:
                 if g.id not in self.ignored_guilds and \
                         c.id not in self.ignored_channels and \
@@ -307,6 +317,10 @@ class BlackList(commands.Cog):
             dms = "Yes"
         else:
             dms = "No"
+        if "all" in self.ignored_bots:
+            bots = "Yes"
+        else:
+            bots = "No"
 
         message = "```" \
                   "Currently ignored:\n\n" \
@@ -316,7 +330,8 @@ class BlackList(commands.Cog):
                   f"{tab(channel_table, headers=channel_headers)}\n\n" \
                   f"Servers:\n" \
                   f"{tab(guild_table, headers=guild_headers)}\n\n" \
-                  f"Direct Messages: {dms}" \
+                  f"Direct Messages: {dms}\n" \
+                  f"Bots: {bots}" \
                   "```"
 
         await ctx.send(message)
