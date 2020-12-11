@@ -27,6 +27,11 @@ class Weather(commands.Cog):
         if self.token is None:
             raise RuntimeError("You need to assign a weather token")
 
+        self.config.set_default_config("currentCache", "Weather", "60")
+        self.config.set_default_config("fiveDayForecastCache", "Weather", "900")
+        self.current_cache = int(self.config.get_config("currentCache", "Weather"))
+        self.five_day_forecast_cache = int(self.config.get_config("fiveDayForecastCache", "Weather"))
+
         self.current_weather = {}   # city -> [current weather as dict, date]
         self.forecast_weather = {}  # city -> [forecast weather as dict, date]
 
@@ -36,7 +41,7 @@ class Weather(commands.Cog):
                 self.current_weather[city] = [get_current_weather(city, self.token), time.time()]
             else:
                 now = time.time()
-                if now > self.current_weather[city][1] + 60:
+                if now > self.current_weather[city][1] + self.current_cache:
                     self.current_weather[city] = [get_current_weather(city, self.token), time.time()]
             return self.current_weather[city]
 
@@ -45,7 +50,7 @@ class Weather(commands.Cog):
                 self.forecast_weather[city] = [get_forecast(city, self.token), time.time()]
             else:
                 now = time.time()
-                if now > self.forecast_weather[city][1] + 900:
+                if now > self.forecast_weather[city][1] + self.five_day_forecast_cache:
                     self.forecast_weather[city] = [get_forecast(city, self.token), time.time()]
             return self.forecast_weather[city]
 
