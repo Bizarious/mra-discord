@@ -10,6 +10,59 @@ from core.bot.message_parser import MessageParser
 from datetime import datetime as dt
 
 
+class CustomHelp(commands.DefaultHelpCommand):
+    def __init__(self):
+        commands.DefaultHelpCommand.__init__(self)
+        self.sort_commands = False
+
+    async def send_bot_help(self, mapping):
+        await commands.DefaultHelpCommand.send_bot_help(self, mapping)
+        print("Bot Help")
+
+    async def custom_filter(self, cmds, *, sort=False, key=None):
+        if sort and key is None:
+            def key(c):
+                return c.name
+
+        iterator = cmds
+
+        if not self.verify_checks:
+            # if we do not need to verify the checks then we can just
+            # run it straight through normally without using await.
+            return sorted(iterator, key=key) if sort else list(iterator)
+
+        # if we're here then we need to check every command if it can run
+        async def predicate(cmd_in):
+            try:
+                return await cmd_in.can_run(self.context)
+            except commands.CommandError:
+                return False
+
+        ret = []
+        for cmd in iterator:
+            valid = await predicate(cmd)
+            if valid:
+                ret.append(cmd)
+
+        if sort:
+            ret.sort(key=key)
+        return ret
+
+    async def send_cog_help(self, cog):
+        if cog.description:
+            self.paginator.add_line(cog.description, empty=True)
+
+        filtered = await self.custom_filter(cog.get_commands(), sort=self.sort_commands)
+        self.add_indented_commands(filtered, heading=self.commands_heading)
+
+        note = self.get_ending_note()
+        if note:
+            self.paginator.add_line()
+            self.paginator.add_line(note)
+
+        await self.send_pages()
+
+
 class BotClient(commands.Bot, CogMethodHandler):
     def __init__(self, data, config, ipc: IPC):
         CogMethodHandler.__init__(self)
@@ -26,7 +79,7 @@ class BotClient(commands.Bot, CogMethodHandler):
         intents = discord.Intents.default()
         intents.members = True
 
-        commands.Bot.__init__(self, command_prefix=self.return_prefix, intents=intents)
+        commands.Bot.__init__(self, command_prefix=self.return_prefix, intents=intents, help_command=CustomHelp())
 
         self.core_cogs_path = "./core/commands"
         self.core_import_cogs_path = "core.commands"
