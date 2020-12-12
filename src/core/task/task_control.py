@@ -37,7 +37,6 @@ class TaskLimiter:
         self.limits = self.data.get_json(file="limits", path="tasks")
 
     def reached_limit(self, uid: int, number: int):
-        print(self.limit_owner)
         if self.limit_owner == "False" and uid == self.bot_owner:
             return False
         elif str(uid) in self.limits.keys():
@@ -163,13 +162,18 @@ class TaskManager(Process):
     def add_task(self, pkt):
         if pkt.author_id not in self.tasks.keys():
             self.tasks[pkt.author_id] = []  # author id in task list
+
+        # check for limit
         if self.task_limiter.reached_limit(pkt.author_id, len(self.tasks[pkt.author_id])):
             limit = self.task_limiter.get_limit(pkt.author_id)
             raise RuntimeError(f"You have already reached your task limit ({limit}).")
+
+        # task creation
         try:
-            tsk: tk.TimeBasedTask = self.task_dict[pkt.task](**pkt.kwargs)  # task creation
+            tsk: tk.TimeBasedTask = self.task_dict[pkt.task](**pkt.kwargs)
         except Exception as e:
             raise TaskCreationError(f"Task could not be created: {e}")
+
         tsk.name = pkt.task
         tsk.kwargs = pkt.kwargs
         tsk.calc_counter()
