@@ -167,6 +167,17 @@ class Misc(commands.Cog):
 
         await ctx.send("You are not in a voice channel.")
 
+    @commands.command("listcogs")
+    async def list_cogs(self, ctx):
+        """
+        Lists all existing cogs.
+        """
+        result = "```\n"
+        for c in self.bot.cogs.keys():
+            result += f"{c}\n"
+        result += "```"
+        await ctx.send(result)
+
 
 def setup(bot):
     bot.add_cog(Misc(bot))

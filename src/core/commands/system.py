@@ -10,7 +10,7 @@ class System(commands.Cog):
         self.bot = bot
         self.config: ConfigManager = self.bot.config
 
-    @commands.command()
+    @commands.command(hidden=True)
     @commands.check(is_owner)
     async def shutdown(self, _, date_string=None):
         """
@@ -26,7 +26,7 @@ class System(commands.Cog):
             t = self.bot.ipc.pack(author_id=0, date_string=date_string, mode="shutdown")
             self.bot.ipc.send(dst="task", package=t, cmd="task", task="Shutdown", author_id=0)
 
-    @commands.command()
+    @commands.command(hidden=True)
     @commands.check(is_owner)
     async def restart(self, _, date_string=None):
         """
@@ -42,7 +42,7 @@ class System(commands.Cog):
             t = self.bot.ipc.pack(author_id=0, date_string=date_string, mode="restart")
             self.bot.ipc.send(dst="task", package=t, cmd="task", task="Shutdown", author_id=0)
 
-    @commands.command()
+    @commands.command(hidden=True)
     @commands.check(is_owner)
     async def update(self, ctx):
         """
@@ -54,7 +54,7 @@ class System(commands.Cog):
         else:
             await ctx.send("Updated")
 
-    @commands.command("prefix")
+    @commands.command("prefix", hidden=True)
     @commands.check(is_owner)
     async def change_prefix(self, ctx, prefix):
         """

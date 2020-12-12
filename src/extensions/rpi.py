@@ -9,7 +9,7 @@ class RaspberryPi(commands.Cog, name="Raspberry Pi"):
         self.bot = bot
         self.config: ConfigManager = self.bot.config
 
-    @commands.command()
+    @commands.command(hidden=True)
     @commands.check(is_owner)
     async def temp(self, ctx):
         """

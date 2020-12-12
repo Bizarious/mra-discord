@@ -74,7 +74,7 @@ class ExtensionHandler(commands.Cog, name="Extension Handler"):
                 s.append(f[:-3])
         return s
 
-    @commands.command("listexts")
+    @commands.command("listexts", hidden=True)
     @commands.check(is_owner)
     async def list_extensions(self, ctx):
         """
@@ -112,7 +112,7 @@ class ExtensionHandler(commands.Cog, name="Extension Handler"):
 
         await ctx.send(result)
 
-    @commands.command("load")
+    @commands.command("load", hidden=True)
     @commands.check(is_owner)
     async def load_ext(self, ctx, cog):
         """
@@ -129,7 +129,7 @@ class ExtensionHandler(commands.Cog, name="Extension Handler"):
             return
         self.loaded_cogs[cog] = cog_path
 
-    @commands.command("unload")
+    @commands.command("unload", hidden=True)
     @commands.check(is_owner)
     async def unload_ext(self, ctx, cog):
         """
@@ -141,7 +141,7 @@ class ExtensionHandler(commands.Cog, name="Extension Handler"):
             return
         await ctx.send("Cog is not loaded")
 
-    @commands.command("reload")
+    @commands.command("reload", hidden=True)
     @commands.check(is_owner)
     async def reload_ext(self, ctx, cog):
         """
@@ -152,7 +152,7 @@ class ExtensionHandler(commands.Cog, name="Extension Handler"):
             return
         await ctx.send("Cog is not loaded")
 
-    @commands.command("reloadall")
+    @commands.command("reloadall", hidden=True)
     @commands.check(is_owner)
     async def reload_all_ext(self, _):
         """
@@ -161,7 +161,7 @@ class ExtensionHandler(commands.Cog, name="Extension Handler"):
         for c in self.loaded_cogs.keys():
             self.bot.reload_extension(self.loaded_cogs[c])
 
-    @commands.command("loadall")
+    @commands.command("loadall", hidden=True)
     @commands.check(is_owner)
     async def load_all_ext(self, _):
         """
@@ -177,7 +177,7 @@ class ExtensionHandler(commands.Cog, name="Extension Handler"):
                 except commands.ExtensionAlreadyLoaded:
                     pass
 
-    @commands.command("unloadall")
+    @commands.command("unloadall", hidden=True)
     @commands.check(is_owner)
     async def unload_all_ext(self, _):
         """
@@ -187,7 +187,7 @@ class ExtensionHandler(commands.Cog, name="Extension Handler"):
             self.bot.unload_extension(self.loaded_cogs[c])
         self.loaded_cogs = {}
 
-    @commands.command("los")
+    @commands.command("los", hidden=True)
     @commands.check(is_owner)
     async def set_loaded_cogs_on_startup(self, _, *, cogs):
         """

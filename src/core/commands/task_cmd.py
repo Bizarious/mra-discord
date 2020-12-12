@@ -9,8 +9,8 @@ class Tasks(commands.Cog):
         self.bot.permit.add_group("task", True)
         self.bot.permit.add_group("taskExtra", False)
 
-    @commands.command()
-    async def gt(self, ctx, a_id=None):
+    @commands.command("gt")
+    async def get_tasks(self, ctx, a_id=None):
         """
         Displays all active tasks.
 
@@ -90,7 +90,7 @@ class Tasks(commands.Cog):
         if isinstance(answer, Exception):
             raise answer
 
-    @commands.command("addlimit")
+    @commands.command("addlimit", hidden=True)
     @commands.check(is_owner)
     async def add_limit(self, _, uid, value):
         """
@@ -129,7 +129,7 @@ class Tasks(commands.Cog):
         if isinstance(answer, Exception):
             raise answer
 
-    @commands.command("rmlimit")
+    @commands.command("rmlimit", hidden=True)
     @commands.check(is_owner)
     async def remove_limit(self, _, uid):
         """

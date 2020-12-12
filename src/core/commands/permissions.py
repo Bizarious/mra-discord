@@ -11,7 +11,7 @@ class PermissionsHandler(commands.Cog, name="Permissions Handler"):
     def check_default_users(self, uid: int):
         self.permissions.add_to_default_groups(uid)
 
-    @commands.command("autg")
+    @commands.command("autg", hidden=True)
     @commands.check(is_owner)
     async def add_user_to_group(self, ctx, uid, group):
         """
@@ -37,7 +37,7 @@ class PermissionsHandler(commands.Cog, name="Permissions Handler"):
         self.permissions.add_to_group(int(uid), group)
         await ctx.send(f"Added <@{uid}> to '{group}'.")
 
-    @commands.command("rufg")
+    @commands.command("rufg", hidden=True)
     @commands.check(is_owner)
     async def remove_user_from_group(self, ctx, uid, group):
         """
@@ -63,7 +63,7 @@ class PermissionsHandler(commands.Cog, name="Permissions Handler"):
         self.permissions.remove_from_group(int(uid), group)
         await ctx.send(f"Removed <@{uid}> from '{group}'.")
 
-    @commands.command("deluser")
+    @commands.command("deluser", hidden=True)
     @commands.check(is_owner)
     async def delete_user(self, ctx, uid):
         """
@@ -81,7 +81,7 @@ class PermissionsHandler(commands.Cog, name="Permissions Handler"):
         self.permissions.delete_user(int(uid))
         await ctx.send(f"Removed <@{uid}> from all groups.")
 
-    @commands.command("resetperm")
+    @commands.command("resetperm", hidden=True)
     @commands.check(is_owner)
     async def delete_all_users(self, ctx):
         """
@@ -90,7 +90,7 @@ class PermissionsHandler(commands.Cog, name="Permissions Handler"):
         self.permissions.delete_all_users()
         await ctx.send("Removed all users from the permissions.")
 
-    @commands.command("adu")
+    @commands.command("adu", hidden=True)
     @commands.check(is_owner)
     async def set_default_permissions(self, ctx):
         """
@@ -100,7 +100,7 @@ class PermissionsHandler(commands.Cog, name="Permissions Handler"):
         counter = self.permissions.add_to_default_groups(*users)
         await ctx.send(f"```Added {counter} new users to the default groups.```")
 
-    @commands.command("showgr")
+    @commands.command("showgr", hidden=True)
     @commands.check(is_owner)
     async def get_groups(self, ctx):
         """
@@ -114,7 +114,7 @@ class PermissionsHandler(commands.Cog, name="Permissions Handler"):
 
         await ctx.send(result)
 
-    @commands.command("setowner")
+    @commands.command("setowner", hidden=True)
     @commands.check(is_owner)
     async def set_bot_owner(self, ctx, uid):
         """

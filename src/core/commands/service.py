@@ -31,7 +31,7 @@ class ServiceManager(commands.Cog, name="Service Manager"):
                 c = self.bot.services[i][1]
                 svc.start(c)
 
-    @commands.command("enable")
+    @commands.command("enable", hidden=True)
     @commands.check(is_owner)
     async def enable_service(self, ctx, svc):
         """
@@ -44,7 +44,7 @@ class ServiceManager(commands.Cog, name="Service Manager"):
         s.start(c)
         await ctx.send(f"started service '{svc}'.")
 
-    @commands.command("disable")
+    @commands.command("disable", hidden=True)
     @commands.check(is_owner)
     async def disable_service(self, ctx, svc):
         """
@@ -55,7 +55,7 @@ class ServiceManager(commands.Cog, name="Service Manager"):
         self.bot.services[svc][0].cancel()
         await ctx.send(f"canceled service '{svc}'.")
 
-    @commands.command("listservices")
+    @commands.command("listservices", hidden=True)
     @commands.check(is_owner)
     async def list_services(self, ctx):
         """
@@ -95,7 +95,7 @@ class ServiceManager(commands.Cog, name="Service Manager"):
 
         await ctx.send(result)
 
-    @commands.command("sds")
+    @commands.command("sds", hidden=True)
     @commands.check(is_owner)
     async def set_default_services(self, _, *, services):
         """

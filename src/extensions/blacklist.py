@@ -6,7 +6,7 @@ from core.bot import on_message_check
 from typing import Union
 
 
-class BlackList(commands.Cog):
+class BlackList(commands.Cog, name="Blacklist"):
 
     def __init__(self, bot):
         self.bot = bot
@@ -101,7 +101,7 @@ class BlackList(commands.Cog):
                 return True
         return False
 
-    @commands.command()
+    @commands.command(hidden=True)
     @commands.check(is_owner)
     async def ignore(self, ctx, subject, subject_id):
         """
@@ -181,7 +181,7 @@ class BlackList(commands.Cog):
         else:
             raise RuntimeError(f"'{subject}' is no valid argument.")
 
-    @commands.command()
+    @commands.command(hidden=True)
     @commands.check(is_owner)
     async def note(self, ctx, subject, subject_id):
         """
@@ -275,7 +275,7 @@ class BlackList(commands.Cog):
         else:
             raise RuntimeError(f"'{subject}' is no valid argument.")
 
-    @commands.command()
+    @commands.command(hidden=True)
     @commands.check(is_owner)
     async def ignored(self, ctx):
         """
