@@ -44,20 +44,25 @@ class BotClient(commands.Bot, CogMethodHandler):
         pkt = self.ipc.check_queue("bot")
         await self.parse_commands(pkt)
 
+    async def send(self, pkt):
+        # parses special arguments for message
+        ctx = self.parser.parse(pkt.message, pkt.message_args)
+        try:
+            if ctx.privacy == "public" and hasattr(pkt, "channel_id"):
+                if pkt.channel_id is not None:
+                    await self.get_channel(pkt.channel_id).send(ctx.message)
+                else:
+                    # sends private, when no channel was specified
+                    await self.get_user(pkt.author_id).send(ctx.message)
+            else:
+                await self.get_user(pkt.author_id).send(ctx.message)
+        except Exception as e:
+            print(e)
+
     async def parse_commands(self, pkt):
         if pkt is not None:
             if pkt.cmd == "send":
-                ctx = self.parser.parse(pkt.message, pkt.message_args)
-                try:
-                    if ctx.privacy == "public" and hasattr(pkt, "channel_id"):
-                        if pkt.channel_id is not None:
-                            await self.get_channel(pkt.channel_id).send(ctx.message)
-                        else:
-                            await self.get_user(pkt.author_id).send(ctx.message)
-                    else:
-                        await self.get_user(pkt.author_id).send(ctx.message)
-                except Exception as e:
-                    print(e)
+                await self.send(pkt)
             else:
                 fct = self.cmd_parsers[pkt.cmd][0]
                 cog = self.cmd_parsers[pkt.cmd][1]
@@ -79,6 +84,7 @@ class BotClient(commands.Bot, CogMethodHandler):
 
     async def on_message(self, message):
         limits = []
+        # executes every limit function and checks, if they all return true
         for limit in self.limit_cmd_processing:
             result = await limit[0](limit[1], message)
             if not isinstance(result, bool):
