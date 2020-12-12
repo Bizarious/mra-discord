@@ -1,7 +1,8 @@
-from discord.ext import commands
+from discord.ext import commands, tasks
 from tabulate import tabulate as tab
 from core.permissions import is_owner
 from core.database import ConfigManager
+from core.bot import service
 
 
 class ServiceManager(commands.Cog, name="Service Manager"):
@@ -9,29 +10,50 @@ class ServiceManager(commands.Cog, name="Service Manager"):
         self.bot = bot
         self.config: ConfigManager = self.bot.config
 
+        self.config.set_default_config("defaultServices", "Services", "None")
+        self.start_services = self.config.get_config("defaultServices", "Services")
+
+    def start_default_services(self):
+        if self.start_services == "None":
+            return
+
+        # split commas
+        s = self.start_services.split(",")
+
+        # remove spaces
+        for i in range(len(s)):
+            s[i] = s[i].replace(" ", "")
+
+        # starting services
+        for i in self.bot.services.keys():
+            if i in s or "all" in s:
+                svc = self.bot.services[i][0]
+                c = self.bot.services[i][1]
+                svc.start(c)
+
     @commands.command("enable")
     @commands.check(is_owner)
-    async def enable_service(self, ctx, service):
+    async def enable_service(self, ctx, svc):
         """
         Enables the given service.
         """
-        if service not in self.bot.services.keys():
+        if svc not in self.bot.services.keys():
             raise RuntimeError("This service does not exist.")
-        s = self.bot.services[service][0]
-        c = self.bot.services[service][1]
+        s = self.bot.services[svc][0]
+        c = self.bot.services[svc][1]
         s.start(c)
-        await ctx.send(f"started service '{service}'.")
+        await ctx.send(f"started service '{svc}'.")
 
     @commands.command("disable")
     @commands.check(is_owner)
-    async def disable_service(self, ctx, service):
+    async def disable_service(self, ctx, svc):
         """
         Disables the given service.
         """
-        if service not in self.bot.services.keys():
+        if svc not in self.bot.services.keys():
             raise RuntimeError("This service does not exist.")
-        self.bot.services[service][0].cancel()
-        await ctx.send(f"canceled service '{service}'.")
+        self.bot.services[svc][0].cancel()
+        await ctx.send(f"canceled service '{svc}'.")
 
     @commands.command("listservices")
     @commands.check(is_owner)
@@ -72,6 +94,32 @@ class ServiceManager(commands.Cog, name="Service Manager"):
             result = f"```{tab(table, headers=headers)}```"
 
         await ctx.send(result)
+
+    @commands.command("sds")
+    @commands.check(is_owner)
+    async def set_default_services(self, _, *, services):
+        """
+        Sets services, which shall be enabled by default.
+
+        services:
+
+            e.g. 'service1, service2'
+        """
+        self.config.set_config("defaultServices", "Services", services)
+
+    @commands.Cog.listener()
+    async def on_ready(self):
+        self.start_default_services()
+
+    @service("test")
+    @tasks.loop(seconds=3)
+    async def test_loop(self):
+        print(42)
+
+    @service("test2")
+    @tasks.loop(seconds=3)
+    async def test_loop2(self):
+        print(1337)
 
 
 def setup(bot):
