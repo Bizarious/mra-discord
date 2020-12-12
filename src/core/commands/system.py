@@ -1,7 +1,6 @@
 import os
 from discord.ext import commands
 from core.permissions import is_owner
-from core.system import measure_temp
 from core.database import ConfigManager
 from core.bot import handle_ipc_commands
 
@@ -63,19 +62,6 @@ class System(commands.Cog):
         """
         self.bot.change_prefix(prefix, ctx.message.guild.id)
         await ctx.send(f'Changed prefix for server "{self.bot.get_guild(ctx.message.guild.id).name}" to "{prefix}"')
-
-    @commands.command()
-    @commands.check(is_owner)
-    async def temp(self, ctx):
-        """
-        Displays the cpu temperature.
-        """
-        try:
-            temp = measure_temp()
-        except ValueError:
-            await ctx.send("This command is not available on this system.")
-        else:
-            await ctx.send(f'{temp} °C')
 
     @handle_ipc_commands("shutdown", "restart")
     async def parse_commands(self, pkt):
