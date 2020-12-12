@@ -266,6 +266,7 @@ class BlackList(commands.Cog):
 
         elif subject == "every":
             try:
+                # the "s" stands for multiple; the user just types "dm" but means "dms".
                 self.remove_ignore(subject_id + "s", subject)
             except KeyError:
                 raise RuntimeError(f"'{subject_id}' is no valid argument.")
