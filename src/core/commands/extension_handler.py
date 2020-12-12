@@ -78,12 +78,15 @@ class ExtensionHandler(commands.Cog, name="Extension Handler"):
             headers = ["Available", "Loaded"]
             table = []
 
+            # filtering loaded
             loaded = []
             for i in s:
                 if i in self.loaded_cogs.keys():
                     loaded.append(i)
             s = [e for e in s if e not in loaded]
 
+            # calculating length difference
+            # adding empty strings to fill places
             length = len(s) - len(loaded)
             if length > 0:
                 for i in range(length):
