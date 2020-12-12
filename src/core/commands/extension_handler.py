@@ -16,7 +16,7 @@ class ExtensionHandler(commands.Cog, name="Extension Handler"):
     def __init__(self, bot):
         self.bot = bot
         self.config: ConfigManager = self.bot.config
-        self.config.set_default_config("loadCogs", "ExtensionHandler", "none")
+        self.config.set_default_config("loadCogs", "ExtensionHandler", "None")
         self.paths = {"./extensions": "extensions",
                       "./custom_extensions": "custom_extensions"}
         self.loaded_cogs = {}
@@ -47,13 +47,22 @@ class ExtensionHandler(commands.Cog, name="Extension Handler"):
                 self.bot.load_extension(f"{self.base_import_path}.{f[:-3]}")
 
     def load_extra_ext(self):
-        if self.load_cogs == "none":
+        if self.load_cogs == "None":
             return
         paths = self.list_all_extensions()
+
+        # split commas
+        cogs = self.load_cogs.split(",")
+
+        # remove spaces
+        for i in range(len(cogs)):
+            cogs[i] = cogs[i].replace(" ", "")
+
+        # adding cogs
         for f in paths.keys():
             if not f.startswith("__") and \
                     f.endswith(".py") and \
-                    (f[:-3] in self.load_cogs or "all" in self.load_cogs):
+                    (f[:-3] in cogs or "all" in cogs):
                 self.bot.load_extension(paths[f])
                 self.loaded_cogs[f[:-3]] = paths[f]
 
