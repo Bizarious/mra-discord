@@ -28,13 +28,18 @@ class TaskLimiter:
         self.config = config
 
         self.config.set_default_config("taskLimit", "Tasks", "5")
+        self.config.set_default_config("systemTaskLimit", "Tasks", "10")
         self.config.set_default_config("applyTaskLimitToOwner", "Tasks", "True")
 
         self.task_limit = int(self.config.get_config("taskLimit", "Tasks"))
         self.limit_owner = self.config.get_config("applyTaskLimitToOwner", "Tasks")
+        self.limit_system = int(self.config.get_config("systemTaskLimit", "Tasks"))
         self.bot_owner = int(self.config.get_config("botOwner", "General"))
 
         self.limits = self.data.get_json(file="limits", path="tasks")
+
+        # system commands get extra limit
+        self.limits["0"] = self.limit_system
 
     def reached_limit(self, uid: int, number: int):
         if self.limit_owner == "False" and uid == self.bot_owner:

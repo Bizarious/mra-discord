@@ -94,6 +94,12 @@ class BotClient(commands.Bot, CogMethodHandler):
         await self.parse_commands(pkt)
 
     async def send(self, pkt):
+        aid = pkt.author_id
+
+        # system messages are send to the bot owner
+        if aid == 0:
+            aid = self.permit.bot_owner
+
         # parses special arguments for message
         ctx = self.parser.parse(pkt.message, pkt.message_args)
         try:
@@ -102,9 +108,9 @@ class BotClient(commands.Bot, CogMethodHandler):
                     await self.get_channel(pkt.channel_id).send(ctx.message)
                 else:
                     # sends private, when no channel was specified
-                    await self.get_user(pkt.author_id).send(ctx.message)
+                    await self.get_user(aid).send(ctx.message)
             else:
-                await self.get_user(pkt.author_id).send(ctx.message)
+                await self.get_user(aid).send(ctx.message)
         except Exception as e:
             print(e)
 
