@@ -6,7 +6,7 @@ from core.bot import on_message_check
 from typing import Union
 
 
-class BlackList(commands.Cog, name="Blacklist"):
+class IgnoreList(commands.Cog, name="Ignore List"):
 
     def __init__(self, bot):
         self.bot = bot
@@ -15,12 +15,12 @@ class BlackList(commands.Cog, name="Blacklist"):
                                   "ignored_guilds",
                                   "ignored_channels",
                                   "ignored_dms",
-                                  "ignored_bots",
-                                  "blacklist"]
+                                  "ignored_bots"
+                                  ]
 
         self.data: Data = self.bot.data
         self.config: ConfigManager = self.bot.config
-        self.permissions = self.data.get_json(file="blacklist")
+        self.permissions = self.data.get_json(file="ignored")
         self.first_startup()
 
     def first_startup(self):
@@ -30,7 +30,7 @@ class BlackList(commands.Cog, name="Blacklist"):
                 changed = True
                 self.permissions[s] = []
         if changed:
-            self.data.set_json(file="blacklist", data=self.permissions)
+            self.data.set_json(file="ignored", data=self.permissions)
 
     @property
     def bot_owner(self) -> int:
@@ -56,16 +56,12 @@ class BlackList(commands.Cog, name="Blacklist"):
     def ignored_bots(self) -> list:
         return self.permissions["ignored_bots"]
 
-    @property
-    def blacklist(self) -> list:
-        return self.permissions["blacklist"]
-
     def add_ignore(self, subject: str, subject_id: Union[str, int]):
         real_subject = f"ignored_{subject}"
         if subject_id in self.permissions[real_subject]:
             raise ValueError(subject_id)
         self.permissions[real_subject].append(subject_id)
-        self.data.set_json(file="blacklist", data=self.permissions)
+        self.data.set_json(file="ignored", data=self.permissions)
 
     def remove_ignore(self, subject: str, subject_id: Union[str, int]):
         real_subject = f"ignored_{subject}"
@@ -75,7 +71,7 @@ class BlackList(commands.Cog, name="Blacklist"):
             self.permissions[real_subject] = []
         else:
             self.permissions[real_subject].remove(subject_id)
-        self.data.set_json(file="blacklist", data=self.permissions)
+        self.data.set_json(file="ignored", data=self.permissions)
 
     @on_message_check
     async def check_ignored(self, message) -> bool:
@@ -339,4 +335,4 @@ class BlackList(commands.Cog, name="Blacklist"):
 
 
 def setup(bot):
-    bot.add_cog(BlackList(bot))
+    bot.add_cog(IgnoreList(bot))
