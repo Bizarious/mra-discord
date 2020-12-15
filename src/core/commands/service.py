@@ -1,8 +1,7 @@
-from discord.ext import commands, tasks
+from discord.ext import commands
 from tabulate import tabulate as tab
 from core.permissions import is_owner
 from core.database import ConfigManager
-from core.bot import service
 
 
 class ServiceManager(commands.Cog, name="Service Manager"):
@@ -110,16 +109,6 @@ class ServiceManager(commands.Cog, name="Service Manager"):
     @commands.Cog.listener()
     async def on_ready(self):
         self.start_default_services()
-
-    @service("test")
-    @tasks.loop(seconds=3)
-    async def test_loop(self):
-        print(42)
-
-    @service("test2")
-    @tasks.loop(seconds=3)
-    async def test_loop2(self):
-        print(1337)
 
 
 def setup(bot):
