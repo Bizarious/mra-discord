@@ -15,10 +15,6 @@ class CustomHelp(commands.DefaultHelpCommand):
         commands.DefaultHelpCommand.__init__(self)
         self.sort_commands = False
 
-    async def send_bot_help(self, mapping):
-        await commands.DefaultHelpCommand.send_bot_help(self, mapping)
-        print("Bot Help")
-
     async def custom_filter(self, cmds, *, sort=False, key=None):
         if sort and key is None:
             def key(c):
