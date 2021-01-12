@@ -48,7 +48,7 @@ class Tasks(commands.Cog):
     @commands.command("dt")
     async def delete_task(self, ctx, task_id, a_id=None):
         """
-        Deletes a message.
+        Deletes tasks.
 
         task_id:
 
