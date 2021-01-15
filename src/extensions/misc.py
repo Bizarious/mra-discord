@@ -2,7 +2,7 @@ import discord
 import platform as pf
 from discord import DMChannel
 from discord.ext import commands
-import random
+import secrets
 import asyncio
 from core.version import __version__
 from core.enums import Dates
@@ -12,6 +12,7 @@ from core.permissions import is_group_member, is_owner
 class Misc(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.user_count = {}
 
     @commands.command()
     async def echo(self, ctx, *, content):
@@ -141,31 +142,70 @@ class Misc(commands.Cog):
 
         await ctx.send(embed=embed)
 
-    @commands.command()
-    async def choose(self, ctx, amount=0):
-        """
-        Chooses randomly a member of the voice-channel you are in and mentions it.
-        """
-        if amount > 10000:
-            raise RuntimeError("Number of rolls must not be greater than 10000.")
+    def get_voice_channel(self, ctx):
         guild = self.bot.get_guild(ctx.message.guild.id)
         vc = guild.voice_channels
+        channel = None
         for c in vc:
             for m in c.members:
                 if m.id == ctx.message.author.id:
-                    if amount == 0:
-                        i = random.randint(0, len(c.members) - 1)
-                        await ctx.send(c.members[i].mention)
-                        return
-                    else:
-                        amount_list = []
-                        for _ in range(amount):
-                            amount_list.append(random.randint(0, len(c.members) - 1))
-                        for i in range(len(c.members)):
-                            await ctx.send(c.members[i].mention + f': {amount_list.count(i)}')
-                        return
+                    channel = c
+        return channel
 
-        await ctx.send("You are not in a voice channel.")
+    def get_user_list(self, channel):
+        users = []
+        for m in channel.members:
+            if m.id in self.user_count.keys():
+                for _ in range(self.user_count[m.id]):
+                    users.append(m)
+            else:
+                users.append(m)
+        return users
+
+    def get_probabilities(self, channel):
+        result = "Probabilities:"
+        users = self.get_user_list(channel)
+        user_set = set(users)
+        for u in user_set:
+            n_u = users.count(u)
+            n = len(users)
+            i = round(n_u/n, 3)*100
+            result += f"\n{u.mention}: {i}%"
+        return result
+
+    @commands.group()
+    async def choose(self, ctx):
+        """
+        Chooses randomly a member of the voice-channel you are in and mentions it.
+        """
+        if ctx.invoked_subcommand is None:
+            channel = self.get_voice_channel(ctx)
+
+            if channel is not None:
+                user = secrets.choice(self.get_user_list(channel))
+                await ctx.send(user.mention)
+                return
+            await ctx.send("You are not in a voice channel.")
+
+    @choose.command("set")
+    @commands.check(is_owner)
+    async def set_probability(self, _, uid, number):
+        """
+        Sets a probability to choose for a user.
+        """
+        uid = int(uid)
+        number = int(number)
+        self.user_count[uid] = number
+
+    @choose.command("info")
+    async def show_probabilities(self, ctx):
+        """
+        Shows the probabilities of choosing.
+        """
+        channel = self.get_voice_channel(ctx)
+        if channel is None:
+            raise RuntimeError("You are not in a voice channel.")
+        await ctx.send(self.get_probabilities(channel))
 
     @commands.command("listcogs")
     async def list_cogs(self, ctx):
