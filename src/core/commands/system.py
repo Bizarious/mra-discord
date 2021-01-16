@@ -74,7 +74,7 @@ class System(commands.Cog):
             await self.bot.do_restart()
 
     @service("System-Checker")
-    @tasks.loop(seconds=5)
+    @tasks.loop(minutes=10)
     async def system_checker(self):
         if self.task_check:
             self.task_check = False
