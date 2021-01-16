@@ -114,6 +114,11 @@ class BotClient(commands.Bot, CogMethodHandler):
         except Exception as e:
             print(e)
 
+    async def send_to_admins(self, message):
+        oid = self.permit.bot_owner
+        owner = self.get_user(oid)
+        await owner.send(message)
+
     async def parse_commands(self, pkt):
         if pkt is not None:
             if pkt.cmd == "send":
