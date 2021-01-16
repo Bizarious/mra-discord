@@ -225,3 +225,13 @@ class BotClient(commands.Bot, CogMethodHandler):
             if u.name == name:
                 return u.id
         return None
+
+    def get_voice_channel(self, ctx):
+        guild = self.get_guild(ctx.message.guild.id)
+        vc = guild.voice_channels
+        channel = None
+        for c in vc:
+            for m in c.members:
+                if m.id == ctx.message.author.id:
+                    channel = c
+        return channel
