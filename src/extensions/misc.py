@@ -12,10 +12,13 @@ from core.permissions import is_group_member, is_owner
 
 
 class AbstractChooser(ABC):
-    user_count = {}
+    """
+    Chooser Template. Used for implementing different kinds of choosers.
+    """
 
     def __init__(self, bot):
         self.bot = bot
+        self.user_count = {}
 
     def get_user_list(self, channel) -> list:
         users = []
@@ -49,6 +52,9 @@ class AbstractChooser(ABC):
 
 
 class StaticChooser(AbstractChooser):
+    """
+    Chooser implementation for static use. Probabilities do not change when someone was chosen.
+    """
 
     def __init__(self, bot):
         AbstractChooser.__init__(self, bot)
@@ -62,10 +68,48 @@ class StaticChooser(AbstractChooser):
         return None
 
 
+class DynamicChooser(AbstractChooser):
+    """
+    Chooser Implementation for dynamic use. Probabilities do change when someone is chosen to ensure that everyone
+    has a chance.
+    """
+    def __init__(self, bot):
+        AbstractChooser.__init__(self, bot)
+
+    def choose(self, ctx) -> Union[None, str]:
+        channel = self.bot.get_voice_channel(ctx)
+
+        if channel is not None:
+            users = self.get_user_list(channel)
+            user = secrets.choice(users)
+
+            # lower chance for chosen user by one
+            if user.id in self.user_count.keys():
+                if self.user_count[user.id] > 1:
+                    self.user_count[user.id] = self.user_count[user.id] - 1
+            else:
+                self.user_count[user.id] = 1
+
+            # remove all references to the user
+            users = list(filter(lambda x: x != user, users))
+            user_set = set(users)
+
+            # raise numbers for every user that was not chosen by one
+            for u in user_set:
+                c = users.count(u)
+                self.user_count[u.id] = c + 1
+
+            return user.mention
+
+        return None
+
+
 class Misc(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.chooser = StaticChooser(self.bot)
+        self.static_chooser = StaticChooser(self.bot)
+        self.dynamic_chooser = DynamicChooser(self.bot)
+        self.chooser = self.dynamic_chooser
 
     @commands.command()
     async def echo(self, ctx, *, content):
@@ -216,6 +260,19 @@ class Misc(commands.Cog):
         uid = int(uid)
         number = int(number)
         self.chooser.set_probabilities(uid, number)
+
+    @choose.command()
+    @commands.check(is_owner)
+    async def switch(self, ctx):
+        """
+        Switches between static and dynamic chooser.
+        """
+        if self.chooser == self.static_chooser:
+            self.chooser = self.dynamic_chooser
+            await ctx.send("Switched to dynamic chooser")
+        else:
+            self.chooser = self.static_chooser
+            await ctx.send("switched to static chooser")
 
     @choose.command("info")
     async def show_probabilities(self, ctx):
