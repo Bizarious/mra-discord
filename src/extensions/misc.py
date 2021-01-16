@@ -2,6 +2,8 @@ import discord
 import platform as pf
 from discord import DMChannel
 from discord.ext import commands
+from abc import ABC, abstractmethod
+from typing import Union
 import secrets
 import asyncio
 from core.version import __version__
@@ -9,10 +11,61 @@ from core.enums import Dates
 from core.permissions import is_group_member, is_owner
 
 
+class AbstractChooser(ABC):
+    user_count = {}
+
+    def __init__(self, bot):
+        self.bot = bot
+
+    def get_user_list(self, channel) -> list:
+        users = []
+        for m in channel.members:
+            if m.id in self.user_count.keys():
+                for _ in range(self.user_count[m.id]):
+                    users.append(m)
+            else:
+                users.append(m)
+        return users
+
+    def get_probabilities(self, channel) -> str:
+        result = "Probabilities:"
+        users = self.get_user_list(channel)
+        user_set = set(users)
+        for u in user_set:
+            n_u = users.count(u)
+            n = len(users)
+            i = round(n_u/n, 3)*100
+            result += f"\n{u.mention}: {i}%"
+        return result
+
+    def set_probabilities(self, uid: int, number: int):
+        if not isinstance(uid, int) or not isinstance(number, int):
+            raise RuntimeError("uid and number must be integers")
+        self.user_count[uid] = number
+
+    @abstractmethod
+    def choose(self, ctx) -> Union[None, str]:
+        pass
+
+
+class StaticChooser(AbstractChooser):
+
+    def __init__(self, bot):
+        AbstractChooser.__init__(self, bot)
+
+    def choose(self, ctx) -> Union[None, str]:
+        channel = self.bot.get_voice_channel(ctx)
+
+        if channel is not None:
+            user = secrets.choice(self.get_user_list(channel))
+            return user.mention
+        return None
+
+
 class Misc(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.user_count = {}
+        self.chooser = StaticChooser(self.bot)
 
     @commands.command()
     async def echo(self, ctx, *, content):
@@ -142,50 +195,17 @@ class Misc(commands.Cog):
 
         await ctx.send(embed=embed)
 
-    def get_voice_channel(self, ctx):
-        guild = self.bot.get_guild(ctx.message.guild.id)
-        vc = guild.voice_channels
-        channel = None
-        for c in vc:
-            for m in c.members:
-                if m.id == ctx.message.author.id:
-                    channel = c
-        return channel
-
-    def get_user_list(self, channel):
-        users = []
-        for m in channel.members:
-            if m.id in self.user_count.keys():
-                for _ in range(self.user_count[m.id]):
-                    users.append(m)
-            else:
-                users.append(m)
-        return users
-
-    def get_probabilities(self, channel):
-        result = "Probabilities:"
-        users = self.get_user_list(channel)
-        user_set = set(users)
-        for u in user_set:
-            n_u = users.count(u)
-            n = len(users)
-            i = round(n_u/n, 3)*100
-            result += f"\n{u.mention}: {i}%"
-        return result
-
     @commands.group()
     async def choose(self, ctx):
         """
         Chooses randomly a member of the voice-channel you are in and mentions it.
         """
         if ctx.invoked_subcommand is None:
-            channel = self.get_voice_channel(ctx)
-
-            if channel is not None:
-                user = secrets.choice(self.get_user_list(channel))
-                await ctx.send(user.mention)
-                return
-            await ctx.send("You are not in a voice channel.")
+            result = self.chooser.choose(ctx)
+            if result is None:
+                await ctx.send("You are not in a voice channel.")
+            else:
+                await ctx.send(result)
 
     @choose.command("set")
     @commands.check(is_owner)
@@ -195,17 +215,17 @@ class Misc(commands.Cog):
         """
         uid = int(uid)
         number = int(number)
-        self.user_count[uid] = number
+        self.chooser.set_probabilities(uid, number)
 
     @choose.command("info")
     async def show_probabilities(self, ctx):
         """
         Shows the probabilities of choosing.
         """
-        channel = self.get_voice_channel(ctx)
+        channel = self.bot.get_voice_channel(ctx)
         if channel is None:
             raise RuntimeError("You are not in a voice channel.")
-        await ctx.send(self.get_probabilities(channel))
+        await ctx.send(self.chooser.get_probabilities(channel))
 
     @commands.command("listcogs")
     async def list_cogs(self, ctx):
