@@ -34,7 +34,7 @@ class AbstractChooser(ABC):
         for u in user_set:
             n_u = users.count(u)
             n = len(users)
-            i = round(n_u/n, 3)*100
+            i = round((n_u/n)*100, 1)
             result += f"\n{u.mention}: {i}%"
         return result
 
