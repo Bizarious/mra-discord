@@ -289,7 +289,9 @@ class TaskManager(Process):
     def parse_commands(self, pkt) -> Union[str, None]:
         if pkt is not None:
             try:
-                if pkt.cmd == "stop":
+                if pkt.cmd == "ping":
+                    pkt.pipe.send("ping")
+                elif pkt.cmd == "stop":
                     return "stop"
                 elif pkt.cmd == "wait":
                     return "wait"
