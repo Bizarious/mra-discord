@@ -1,14 +1,17 @@
 import os
-from discord.ext import commands
+from discord.ext import commands, tasks
 from core.permissions import is_owner
 from core.database import ConfigManager
 from core.bot import handle_ipc_commands
+from core.bot import service
 
 
 class System(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.config: ConfigManager = self.bot.config
+
+        self.task_check = True
 
     @commands.command(hidden=True)
     @commands.check(is_owner)
@@ -69,7 +72,17 @@ class System(commands.Cog):
             await self.bot.shutdown()
         elif pkt.cmd == "restart":
             await self.bot.do_restart()
-        
+
+    @service("System-Checker")
+    @tasks.loop(seconds=5)
+    async def system_checker(self):
+        if self.task_check:
+            self.task_check = False
+            pkt = self.bot.ipc.pack()
+            pipe = self.bot.ipc.send(dst="task", package=pkt, cmd="ping", create_pipe=True)
+            if pipe.poll(2) is False:
+                await self.bot.send_to_admins("The task manager does not respond to ping. Please investigate.")
+
 
 def setup(bot):
     bot.add_cog(System(bot))
