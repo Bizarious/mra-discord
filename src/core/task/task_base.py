@@ -1,9 +1,89 @@
+import re
 from croniter import croniter as cr, CroniterBadCronError
 from datetime import datetime as dt, timedelta as td
 from abc import ABC, abstractmethod
 from copy import deepcopy
 from core.enums import Dates
 from core.task.task_exceptions import TaskCreationError
+
+
+class TimeCalculator(ABC):
+    """
+    The abstract class for the time calculator that is used by time-based tasks.
+    """
+
+    def __init__(self, date_string):
+        self.date_string = date_string
+
+    @abstractmethod
+    def calculate_next_time(self, date_time: dt) -> dt:
+        pass
+
+    @abstractmethod
+    def good_date_string(self) -> bool:
+        pass
+
+
+class CronCalculator(TimeCalculator):
+    """
+    The cron-like calculator.
+    """
+
+    def calculate_next_time(self, date_time: dt) -> dt:
+        it = cr(self.date_string, date_time)
+        return it.get_next(dt)
+
+    def good_date_string(self) -> bool:
+        try:
+            it = cr(self.date_string, dt.now())
+        except CroniterBadCronError:
+            return False
+        return True
+
+
+class ImplicitCalculator(TimeCalculator):
+    """
+    Uses "1h15m30s"-like strings.
+    """
+
+    def calculate_next_time(self, date_time: dt) -> dt:
+        """
+        Returns next date.
+        """
+        pass
+
+    def good_date_string(self) -> bool:
+        """
+        Checks, if the passed date_string is good.
+        """
+        pass
+
+
+class AbstractDateStringParser(ABC):
+    """
+    The abstract class for the datestring-parser.
+    """
+
+    # the regex that is used to differ the time calculators
+    regex: [str] = []
+
+    @abstractmethod
+    def parse(self, date_string: str) -> TimeCalculator:
+        pass
+
+
+class DefaultDateStringParser(AbstractDateStringParser):
+    """
+    The default implementation of the datestring-parser. Chooses between cron-like and implicit calculator.
+    """
+
+    regex = ["[1-9]+[0-9]*[h|m|s]"]
+
+    def parse(self, date_string: str) -> TimeCalculator:
+        if re.findall(self.regex[0], date_string):
+            return ImplicitCalculator(date_string)
+        else:
+            return CronCalculator(date_string)
 
 
 class Task(ABC):
@@ -55,132 +135,42 @@ class Task(ABC):
 
 class TimeBasedTask(Task, ABC):
 
-    def __init__(self, *, author_id: int,
-                 channel_id: int = None,
-                 server_id: int = None,
-                 date_string: str = "* * * * *",
-                 label: str = None,
-                 number: int = 0,
-                 min_interval=0,
+    def __init__(self, *, date_string="* * * * *",
+                 dsp=DefaultDateStringParser(),
+                 author_id,
+                 channel_id=None,
+                 server_id=None,
+                 label=None
                  ):
 
-        Task.__init__(self, author_id=author_id,
-                      channel_id=channel_id,
-                      server_id=server_id,
-                      label=label
-                      )
+        Task.__init__(self, author_id=author_id, channel_id=channel_id, server_id=server_id, label=label)
 
-        self.time = []  # empty, if date string is not of form "* * * * *"
-        self.date_string = date_string
-        self.min_interval = min_interval
-
-        if number == 0:
-            self.counter = -1
-        else:
-            self.counter = number
-        if " " not in date_string:
-            self.counter = number
-            for c in ["h", "m", "s"]:
-                if date_string.count(c) > 1:
-                    raise TaskCreationError(f"Multiple statements for '{c}' are not allowed")
-            buffer = ""
-            for c in date_string:
-                buffer += c
-                if c in ["h", "m", "s"]:
-                    self.time.append(buffer)
-                    buffer = ""
-            for time in self.time:
-                n = int(time[:-1])
-                if n == 0:
-                    raise TaskCreationError("0 is not allowed")
-
-        self._next_time = deepcopy(self.creation_time.replace(microsecond=0))
-
-        # flags
-        self.delete = False
-
-        # next date is calculated to check if date strings are right
-        try:
-            self.get_next_date()
-        except CroniterBadCronError:
+        self.time_calc: TimeCalculator = dsp.parse(date_string)
+        if not self.time_calc.good_date_string():
             raise TaskCreationError("Bad date string")
 
-    def get_next_date(self, start: dt = None) -> dt:
-        if len(self.time) == 0:
-
-            # "* * * * *"
-            if start is None:
-                next_time = self.next_time
-            else:
-                next_time = start
-            old_next_time = next_time
-            dates = cr(self.date_string, next_time)
-            self._next_time = dates.get_next(dt)
-            while ((self._next_time - old_next_time).seconds / 60) < self.min_interval:
-                self._next_time = dates.get_next(dt)
-
-        else:
-
-            # "1h"
-            hours = 0
-            minutes = 0
-            seconds = 0
-            for time in self.time:
-                if "h" in time:
-                    hours = int(time[:-1])
-                if "m" in time:
-                    minutes = int(time[:-1])
-                if "s" in time:
-                    seconds = int(time[:-1])
-            delta = td(hours=hours, minutes=minutes, seconds=seconds)
-            self._next_time = self.next_time + delta
-            if self.next_time < dt.now():
-                diff = delta % (dt.now() - self.next_time)
-                self._next_time = dt.now() + diff
-
-        return self.next_time
+        self._next_date: dt = dt.now()
 
     @property
-    def next_time(self) -> dt:
-        return self._next_time
+    def next_date(self):
+        return self._next_date
 
-    def nex_time_string(self, format_string: str) -> str:
-        return self._next_time.strftime(format_string)
+    @next_date.setter
+    def next_date(self, next_time: dt):
+        self._next_date = next_time
 
-    def calc_counter(self):
-        if self.counter > 0:
-            self.counter = self.counter - 1
-        if self.counter == 0:
-            self.delete = True
+    def calc_next_date(self) -> dt:
+        return self.time_calc.calculate_next_time(self.next_date)
 
-    def to_json(self, format_string: str) -> dict:
-        return {"basic": self.kwargs,
-                "extra": {"type": self.name,
-                          "creation_time": self.creation_time_string(format_string),
-                          "next_time": self.nex_time_string(Dates.DATE_FORMAT.value),
-                          "delete": self.delete,
-                          "label": self.label,
-                          "counter": self.counter
-                          }
-                }
-
-    def from_json(self, kwargs: dict):
-        Task.from_json(self, kwargs)
-        self._next_time = dt.strptime(kwargs["extra"]["next_time"], Dates.DATE_FORMAT.value)
-        self.delete = kwargs["extra"]["delete"]
-        self.counter = kwargs["extra"]["counter"]
-
-    @abstractmethod
     def run(self):
         pass
 
-    def execute(self):
-        return self.run()
+    def to_json(self, format_string: str) -> dict:
+        pass
 
 
 if __name__ == "__main__":
-    t = TimeBasedTask(author_id=1, min_interval=10, date_string="119m")
-    t._next_time = dt.now() - td(minutes=120)
-    print(t.next_time)
-    for _ in range(10):
-        print(t.get_next_date())
+    t = TimeBasedTask(date_string="5 20 * * * */5", author_id=0)
+    for _ in range(5):
+        t.next_date = t.calc_next_date()
+        print(t.next_date)
