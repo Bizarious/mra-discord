@@ -1,5 +1,6 @@
 import importlib
 import os
+from abc import abstractmethod
 from typing import Union
 from core.task import task_base as tk
 from datetime import datetime as dt, timedelta as td
@@ -10,8 +11,9 @@ from core.containers import TaskContainer
 from core.system import IPC
 import time
 from core.enums import Dates
-from .task_exceptions import UserHasNoTasksException, TaskIdDoesNotExistException, TaskCreationError
+from core.task.task_exceptions import UserHasNoTasksException, TaskIdDoesNotExistException, TaskCreationError
 from core.database import Data, ConfigManager
+from core.system import IPCPackageHandler
 
 
 def task(name):
@@ -19,6 +21,22 @@ def task(name):
         return TaskContainer(task_class, name)
 
     return decorator
+
+
+class IPCTaskHandler(IPCPackageHandler):
+    """
+    Abstract class for a node of the task-manager's ipc-handler chain
+    """
+
+    def __init__(self, task_manager, next_node):
+        IPCPackageHandler.__init__(self, next_node)
+
+        # pointer to the task manager for calling functions
+        self.task_manager = task_manager
+
+    @abstractmethod
+    def handle(self, pkt):
+        pass
 
 
 class TaskLimiter:
@@ -104,6 +122,10 @@ class TaskManager(Process):
     def __init__(self, data: Data, config: ConfigManager, ipc: IPC):
         Process.__init__(self)
 
+        # holds all nodes of the chain
+        self.nodes: [IPCTaskHandler] = []
+        self.ipc_handler = None
+
         # Queues
         self.task_queue = PriorityQueue()
         self.ipc = ipc
@@ -125,8 +147,9 @@ class TaskManager(Process):
     def load_tasks(self) -> list:
         return self.data.get_json(file="tasks", path="tasks")
 
-    def save_tasks(self):
-        self.data.set_json(file="tasks", path="tasks", data=self.export_tasks())
+    def register_chain(self):
+        for n in self.nodes:
+            self.ipc_handler = n(self, self.ipc_handler)
 
     def register_task(self, module_path: str, file: str):
         task_module = importlib.import_module(f'{module_path}.{file}')
@@ -151,210 +174,9 @@ class TaskManager(Process):
                     if file.endswith(".py") and not file.startswith("__"):
                         self.register_task(self.paths[path], file[:-3])
 
-    def import_tasks(self, tasks: list):
-        for t in tasks:
-            self.add_task_from_dict(t)
-        self.set_next_date()
+    def run(self) -> None:
+        pass
 
-    def export_tasks(self):
-        tasks = []
-        for v in self.tasks.values():
-            t: tk.TimeBasedTask
-            for t in v:
-                tasks.append(t.to_json(Dates.DATE_FORMAT_DETAIL.value))
-        return tasks
 
-    def add_task(self, pkt):
-        if pkt.author_id not in self.tasks.keys():
-            self.tasks[pkt.author_id] = []  # author id in task list
-
-        # check for limit
-        if self.task_limiter.reached_limit(pkt.author_id, len(self.tasks[pkt.author_id])):
-            limit = self.task_limiter.get_limit(pkt.author_id)
-            raise RuntimeError(f"You have already reached your task limit ({limit}).")
-
-        # task creation
-        try:
-            tsk: tk.TimeBasedTask = self.task_dict[pkt.task](**pkt.kwargs)
-        except Exception as e:
-            raise TaskCreationError(f"Task could not be created: {e}")
-
-        tsk.name = pkt.task
-        tsk.kwargs = pkt.kwargs
-        tsk.calc_counter()
-        self.task_queue.put((tsk.next_time, tsk.creation_time, tsk))  # task is added to queue
-        self.tasks[pkt.author_id].append(tsk)  # task is appended to author list
-        self.set_next_date()    # next time is calculated
-        self.save_tasks()
-
-    def add_task_from_dict(self, tsk_dict: dict):
-        # return, when task shall be deleted and next time is in the past
-        if dt.now() > dt.strptime(tsk_dict["extra"]["next_time"], Dates.DATE_FORMAT.value) and \
-                tsk_dict["extra"]["delete"]:
-            return
-
-        # author list is created
-        if tsk_dict["basic"]["author_id"] not in self.tasks.keys():
-            self.tasks[tsk_dict["basic"]["author_id"]] = []
-
-        # task is created
-        tsk: tk.TimeBasedTask = self.task_dict[tsk_dict["extra"]["type"]](**tsk_dict["basic"])
-        tsk.kwargs = tsk_dict["basic"]
-        tsk.from_json(tsk_dict)  # task gets dictionary with extra arguments
-
-        # next time is calculated
-        if dt.now() >= tsk.next_time:
-            next_time = tsk.get_next_date(dt.now())
-        else:
-            next_time = tsk.next_time
-        self.tasks[tsk_dict["basic"]["author_id"]].append(tsk)
-        self.task_queue.put((next_time, tsk.creation_time, tsk))
-
-    def delete_task_from_mapping(self, tsk: tk.Task):
-        author_id = tsk.author_id
-        self.tasks[author_id].remove(tsk)
-        self.save_tasks()
-
-    def delete_task_from_queue(self, tsk: tk.Task):
-        for t in self.task_queue.queue:
-            if t[2] == tsk:
-                self.task_queue.queue.remove(t)
-                return
-        raise RuntimeError("Task not in queue")
-
-    def delete_task(self, tsk: tk.Task):
-        self.delete_task_from_mapping(tsk)
-        self.delete_task_from_queue(tsk)
-        del tsk
-        self.set_next_date()
-
-    def delete_all_tasks(self, uid: int):
-        for t in self.tasks[uid]:
-            self.delete_task_from_queue(t)
-        self.tasks[uid] = []
-        self.save_tasks()
-        self.set_next_date()
-
-    def get_task(self, task_id: int, author_id: int) -> tk.Task:
-        if author_id not in self.tasks.keys():
-            raise UserHasNoTasksException("No active tasks")
-        elif len(self.tasks[author_id]) == 0:
-            raise UserHasNoTasksException("No active tasks")
-        elif len(self.tasks[author_id]) <= task_id:
-            raise TaskIdDoesNotExistException("Task id does not exist")
-        return self.tasks[author_id][task_id]
-
-    def get_tasks(self, author_id: int) -> list:
-        if author_id not in self.tasks.keys():
-            raise UserHasNoTasksException("No active tasks")
-        elif len(self.tasks[author_id]) == 0:
-            raise UserHasNoTasksException("No active tasks")
-        tasks = []
-        for t in self.tasks[author_id]:
-            tasks.append(t.to_json(Dates.DATE_FORMAT.value))
-        return tasks
-
-    def set_next_date(self):
-        if not self.task_queue.empty():
-            tsk = self.task_queue.get()
-            self.next_date = tsk[0]
-            self.task_queue.put(tsk)
-        else:
-            self.next_date = None
-
-    def check_date(self) -> bool:
-        if self.next_date is not None:
-            delta = td(seconds=5)
-            now = dt.now().replace(microsecond=0)
-            if (now >= self.next_date) and (now <= self.next_date + delta):
-                return True
-            return False
-        return False
-
-    def tasks_loop(self):
-        if self.check_date():
-            tsk_tuple: tuple = self.task_queue.get()
-            tsk: tk.TimeBasedTask = tsk_tuple[2]
-            if not tsk.delete:
-                tsk.calc_counter()
-                new_task_tuple = (tsk.get_next_date(), tsk.creation_time, tsk)
-                self.task_queue.put(new_task_tuple)
-            else:
-                self.delete_task_from_mapping(tsk)
-            self.set_next_date()
-            executor = TaskExecutor(tsk, self)
-            self.running_tasks.append(executor)
-            executor.start()
-
-    def parse_commands(self, pkt) -> Union[str, None]:
-        if pkt is not None:
-            try:
-                if pkt.cmd == "ping":
-                    pkt.pipe.send("ping")
-                elif pkt.cmd == "stop":
-                    return "stop"
-                elif pkt.cmd == "wait":
-                    return "wait"
-                elif pkt.cmd == "task":
-                    self.add_task(pkt)
-                elif pkt.cmd == "get_tasks":
-                    tasks = self.get_tasks(pkt.author_id)
-                    pkt.pipe.send(tasks)
-                elif pkt.cmd == "del_task":
-                    if pkt.task_id == "all":
-                        self.delete_all_tasks(pkt.author_id)
-                    else:
-                        tsk = self.get_task(int(pkt.task_id) - 1, pkt.author_id)
-                        self.delete_task(tsk)
-                    pkt.pipe.send(None)
-                elif pkt.cmd == "add_limit":
-                    self.task_limiter.add_limit(pkt.subject_id, pkt.limit)
-                    pkt.pipe.send(None)
-                elif pkt.cmd == "remove_limit":
-                    self.task_limiter.remove_limit(pkt.subject_id)
-                    pkt.pipe.send(None)
-            except Exception as e:
-                if pkt.pipe is not None:
-                    pkt.pipe.send(e)
-                else:
-                    self.ipc.send(dst="bot", package=pkt,
-                                  cmd="send",
-                                  message=f"An error occurred in the Task Manager: {e}",
-                                  message_args="p")
-
-        return None
-
-    def stop(self):
-        t: Thread
-        for t in self.running_tasks:
-            t.join()
-        self.save_tasks()  # tasks are saved
-
-    def run(self):
-        try:
-            pkt = self.ipc.check_queue_block("task")
-            if pkt.cmd == "stop":
-                self.stop()
-                return
-            self.import_tasks(self.load_tasks())
-        except KeyboardInterrupt:
-            self.stop()
-
-        try:
-            while True:
-                pkt = self.ipc.check_queue("task")
-                stop = self.parse_commands(pkt)
-                if stop == "stop":
-                    self.stop()
-                    break
-                elif stop == "wait":
-                    self.save_tasks()
-                    while not self.task_queue.empty():
-                        self.task_queue.get()
-                    self.tasks = {}
-                    self.ipc.check_queue_block("task")
-                    self.import_tasks(self.load_tasks())
-                self.tasks_loop()
-                time.sleep(0.2)
-        except KeyboardInterrupt:
-            self.stop()
+if __name__ == "__main__":
+    pass
