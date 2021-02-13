@@ -2,6 +2,7 @@ from multiprocessing import Queue
 from core.containers import TransferPackage
 from multiprocessing import Pipe
 from typing import Union, Any
+from abc import ABC, abstractmethod
 
 
 class IPC:
@@ -36,3 +37,35 @@ class IPC:
     def check_queue_block(self, entity: str) -> Union[Any, None]:
         queue: Queue = self.queues[entity]
         return queue.get()
+
+
+class IPCPackageHandler(ABC):
+    """
+    Abstract class for a node of the ipc-handler chain.
+    """
+
+    # all commands this node can handle
+    cmd: [str] = []
+
+    def __init__(self, next_node):
+        self.next_node = next_node
+
+    def parse_pkt(self, pkt):
+        """
+        Parses the package. Calls handle if the command is known.
+        """
+
+        # command is known
+        if pkt.cmd in self.cmd:
+            return self.handle(pkt)
+
+        else:
+            # next node does exist
+            if self.next_node is not None:
+                self.next_node.parse_pkt(pkt)
+            else:
+                return None
+
+    @abstractmethod
+    def handle(self, pkt):
+        pass
