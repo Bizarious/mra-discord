@@ -1,6 +1,6 @@
 import importlib
 import os
-from abc import abstractmethod
+from abc import abstractmethod, ABC
 from typing import Union
 from core.task import task_base as tk
 from datetime import datetime as dt, timedelta as td
@@ -25,7 +25,7 @@ def task(name):
 
 class IPCTaskHandler(IPCPackageHandler):
     """
-    Abstract class for a node of the task-manager's ipc-handler chain
+    Abstract class for a node of the task-manager's ipc-handler chain.
     """
 
     def __init__(self, task_manager, next_node):
@@ -36,6 +36,37 @@ class IPCTaskHandler(IPCPackageHandler):
 
     @abstractmethod
     def handle(self, pkt):
+        pass
+
+
+class TaskFactory:
+    """
+    The factory class for creating tasks.
+    """
+
+    def __init__(self, tasks: dict):
+        self.tasks = tasks
+
+
+class TaskScheduler(ABC):
+    """
+    Abstract class for the scheduler-implementation.
+    """
+
+    def __init__(self):
+        self.next_date = None
+
+    @abstractmethod
+    def schedule(self):
+        pass
+
+
+class DefaultTaskScheduler(TaskScheduler):
+    """
+    The default implementation of the scheduler.
+    """
+
+    def schedule(self):
         pass
 
 
@@ -143,6 +174,7 @@ class TaskManager(Process):
         self.next_date = None
 
         self.register_all_tasks()
+        self.task_factory = TaskFactory(self.task_dict)
 
     def load_tasks(self) -> list:
         return self.data.get_json(file="tasks", path="tasks")
