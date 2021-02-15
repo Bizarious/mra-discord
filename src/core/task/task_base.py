@@ -151,17 +151,29 @@ class TimeBasedTask(Task, ABC):
 
         self._next_date: dt = dt.now()
 
+    def __lt__(self, other):
+        # this task is earlier than the other
+        if self.next_date < other.next_date:
+            return True
+        # both have same date
+        elif self.next_date == other.next_date:
+            # check for creation time
+            if self.creation_time < other.creation_time:
+                return True
+        return False
+
     @property
     def next_date(self):
         return self._next_date
 
     @next_date.setter
-    def next_date(self, next_time: dt):
-        self._next_date = next_time
+    def next_date(self, next_date: dt):
+        self._next_date = next_date
 
     def calc_next_date(self) -> dt:
         return self.time_calc.calculate_next_time(self.next_date)
 
+    @abstractmethod
     def run(self):
         pass
 

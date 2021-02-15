@@ -39,6 +39,24 @@ class IPCTaskHandler(IPCPackageHandler):
         pass
 
 
+class TaskAdder(IPCTaskHandler):
+    cmd = ["add_task"]
+
+    def handle(self, pkt):
+        name = pkt.task
+        tsk = self.task_manager.task_factory.produce(name, **pkt.kwargs)
+        tsk.next_date = tsk.calc_next_date()
+        if tsk is not None:
+            self.task_manager.add_tasks(tsk, author_id=pkt.author_id)
+
+
+class TaskManagerStopper(IPCTaskHandler):
+    cmd = ["stop"]
+
+    def handle(self, pkt):
+        return "stop"
+
+
 class TaskFactory:
     """
     The factory class for creating tasks.
@@ -47,27 +65,59 @@ class TaskFactory:
     def __init__(self, tasks: dict):
         self.tasks = tasks
 
+    def produce(self, name: str, **kwargs) -> Union[tk.Task, None]:
+        if name in self.tasks.keys():
+            task_class = self.tasks[name]
+            return task_class(**kwargs)
+        return None
 
-class TaskScheduler(ABC):
+
+class TimeBasedScheduler(ABC):
     """
     Abstract class for the scheduler-implementation.
     """
 
     def __init__(self):
         self.next_date = None
+        self.task_queue = PriorityQueue()
 
     @abstractmethod
     def schedule(self):
         pass
 
+    def add_task(self, tsk: tk.Task):
+        self.task_queue.put(tsk)
 
-class DefaultTaskScheduler(TaskScheduler):
+    def remove_task(self, *tsk: tk.Task):
+        if tsk in self.task_queue.queue:
+            self.task_queue.queue.remove(tsk)
+
+    def calc_next_date(self):
+        if not self.task_queue.empty():
+            tsk: tk.TimeBasedTask = self.task_queue.get()
+            self.next_date = tsk.next_date
+            self.task_queue.put(tsk)
+        else:
+            self.next_date = None
+
+
+class DefaultTimeBasedScheduler(TimeBasedScheduler):
     """
     The default implementation of the scheduler.
     """
 
-    def schedule(self):
-        pass
+    def schedule(self) -> Union[tk.Task, None]:
+        now = dt.now()
+
+        # now between 5 seconds from next date
+        if self.next_date is not None:
+            if self.next_date <= now <= self.next_date + td(seconds=5):
+                tsk: tk.TimeBasedTask = self.task_queue.get()
+                tsk.next_date = tsk.calc_next_date()
+                self.task_queue.put(tsk)
+                self.calc_next_date()
+                return tsk
+        return None
 
 
 class TaskLimiter:
@@ -122,14 +172,14 @@ class TaskLimiter:
 
 
 class TaskExecutor(Thread):
-    def __init__(self, tsk: tk.TimeBasedTask, manager):
+    def __init__(self, tsk: tk.Task, manager):
         Thread.__init__(self)
         self.task = tsk
         self.manager = manager
 
     def run(self):
         try:
-            message = self.task.execute()
+            message = self.task.run()
         except Exception as e:
             message = "send", f"An exception occurred while executing your task: {e}"
 
@@ -149,16 +199,19 @@ class TaskExecutor(Thread):
 
 
 class TaskManager(Process):
+    """
+    Implementation of the task manager. Runs in a separate process. Manages task creation and scheduling.
+    """
 
     def __init__(self, data: Data, config: ConfigManager, ipc: IPC):
         Process.__init__(self)
 
-        # holds all nodes of the chain
-        self.nodes: [IPCTaskHandler] = []
-        self.ipc_handler = None
+        # holds all classes which shall be instantiated and appended to the chain
+        self.nodes: [IPCTaskHandler] = [TaskManagerStopper, TaskAdder]
+        self.ipc_handler: Union[None, IPCTaskHandler] = None
+        self.register_chain()
 
         # Queues
-        self.task_queue = PriorityQueue()
         self.ipc = ipc
         self.running_tasks = []
         self.running_tasks_lock = Lock()
@@ -171,10 +224,14 @@ class TaskManager(Process):
         self.tasks = {}  # author mapping
         self.task_dict = {}  # task classes
 
-        self.next_date = None
-
         self.register_all_tasks()
         self.task_factory = TaskFactory(self.task_dict)
+        self.ts = DefaultTimeBasedScheduler()  # the scheduler
+
+    def get_task_class(self, name: str) -> Union[tk.Task, None]:
+        if name in self.task_dict.keys():
+            return self.task_dict[name]
+        return None
 
     def load_tasks(self) -> list:
         return self.data.get_json(file="tasks", path="tasks")
@@ -206,8 +263,38 @@ class TaskManager(Process):
                     if file.endswith(".py") and not file.startswith("__"):
                         self.register_task(self.paths[path], file[:-3])
 
+    def add_tasks(self, *tsk: tk.Task, author_id: int):
+        if author_id not in self.tasks.keys():
+            self.tasks[author_id] = []
+        for t in tsk:
+            self.tasks[author_id].append(t)
+            self.ts.add_task(t)
+        self.ts.calc_next_date()
+
+    def remove_tasks(self, *tsk: tk.Task, author_id: int):
+        if author_id in self.tasks.keys():
+            for t in tsk:
+                if t in self.tasks[author_id]:
+                    self.tasks[author_id].remove(t)
+                self.ts.remove_task(t)
+        self.ts.calc_next_date()
+
+    def execute_task(self, tsk: tk.Task):
+        te = TaskExecutor(tsk, self)
+        self.running_tasks.append(te)
+        te.start()
+
     def run(self) -> None:
-        pass
+        while True:
+            pkt = self.ipc.check_queue("task")
+            if pkt is not None:
+                result = self.ipc_handler.parse_pkt(pkt)
+                if result == "stop":
+                    break
+            tsk = self.ts.schedule()
+            if tsk is not None:
+                self.execute_task(tsk)
+            time.sleep(0.2)
 
 
 if __name__ == "__main__":

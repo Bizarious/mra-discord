@@ -36,13 +36,13 @@ class TaskManagerTests(TestCase):
                      channel_id=0
                      )
 
-        self.tm.add_task(self.t)
+        self.tm.add_tasks(self.t)
 
     def tearDown(self) -> None:
         self.data.set_json(file="tasks", data=[])
 
     def test_add_task_right_next_date(self):
-        self.tm.add_task(self.t)
+        self.tm.add_tasks(self.t)
         right_next_time = dt.now().replace(microsecond=0) + td(hours=1)
 
         self.assertEqual(self.tm.next_date, right_next_time, msg="Wrong next date")
@@ -65,7 +65,7 @@ class TaskManagerTests(TestCase):
                  channel_id=0
                  )
 
-        self.tm.add_task(t2)
+        self.tm.add_tasks(t2)
         right_next_time = dt.now().replace(microsecond=0) + td(hours=1)
 
         self.assertEqual(self.tm.next_date, right_next_time, msg="Wrong next date")
@@ -88,7 +88,7 @@ class TaskManagerTests(TestCase):
                  channel_id=0
                  )
 
-        self.tm.add_task(t2)
+        self.tm.add_tasks(t2)
         right_next_time = dt.now().replace(microsecond=0) + td(minutes=30)
 
         self.assertEqual(self.tm.next_date, right_next_time, msg="Wrong next date")
@@ -117,7 +117,7 @@ class TaskManagerTests(TestCase):
                  channel_id=0
                  )
 
-        self.tm.add_task(t2)
+        self.tm.add_tasks(t2)
         task = self.tm.get_task(0, 0)
         self.tm.delete_task(task)
         right_next_time = dt.now().replace(microsecond=0) + td(hours=2)
@@ -142,7 +142,7 @@ class TaskManagerTests(TestCase):
                  channel_id=0
                  )
 
-        self.tm.add_task(t2)
+        self.tm.add_tasks(t2)
         task = self.tm.get_task(1, 0)
         self.tm.delete_task(task)
         right_next_time = dt.now().replace(microsecond=0) + td(hours=1)
@@ -167,7 +167,7 @@ class TaskManagerTests(TestCase):
                  channel_id=0
                  )
 
-        self.tm.add_task(t2)
+        self.tm.add_tasks(t2)
         self.tm.delete_all_tasks(0)
 
         self.assertEqual(self.tm.next_date, None, msg="Wrong next date")
@@ -190,7 +190,7 @@ class TaskManagerTests(TestCase):
                  channel_id=0
                  )
 
-        self.tm.add_task(t2)
+        self.tm.add_tasks(t2)
         right_next_time = dt.now().replace(microsecond=0) + td(minutes=30)
 
         self.assertEqual(self.tm.next_date, right_next_time, msg="Wrong next date")
@@ -213,7 +213,7 @@ class TaskManagerTests(TestCase):
                  channel_id=0
                  )
 
-        self.tm.add_task(t2)
+        self.tm.add_tasks(t2)
         right_next_time = dt.now().replace(microsecond=0) + td(minutes=30)
         self.tm.next_date = None
         while not self.tm.task_queue.empty():
@@ -241,7 +241,7 @@ class TaskManagerTests(TestCase):
                  channel_id=0
                  )
 
-        self.tm.add_task(t2)
+        self.tm.add_tasks(t2)
         self.tm.delete_all_tasks(0)
         self.tm.delete_all_tasks(1)
 
