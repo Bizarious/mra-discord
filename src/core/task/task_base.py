@@ -14,13 +14,20 @@ class TimeCalculator(ABC):
 
     def __init__(self, date_string):
         self.date_string = date_string
+        self.delete = False
 
     @abstractmethod
     def calculate_next_time(self, date_time: dt) -> dt:
+        """
+        Returns next date.
+        """
         pass
 
     @abstractmethod
     def good_date_string(self) -> bool:
+        """
+        Checks, if the passed date_string is good.
+        """
         pass
 
 
@@ -35,27 +42,25 @@ class CronCalculator(TimeCalculator):
 
     def good_date_string(self) -> bool:
         try:
-            it = cr(self.date_string, dt.now())
+            cr(self.date_string, dt.now())
         except CroniterBadCronError:
             return False
         return True
 
 
-class ImplicitCalculator(TimeCalculator):
+class OffsetCalculator(TimeCalculator):
     """
     Uses "1h15m30s"-like strings.
     """
 
+    def __init__(self, date_string):
+        TimeCalculator.__init__(self, date_string)
+        self.delete = True
+
     def calculate_next_time(self, date_time: dt) -> dt:
-        """
-        Returns next date.
-        """
         pass
 
     def good_date_string(self) -> bool:
-        """
-        Checks, if the passed date_string is good.
-        """
         pass
 
 
@@ -81,7 +86,7 @@ class DefaultDateStringParser(AbstractDateStringParser):
 
     def parse(self, date_string: str) -> TimeCalculator:
         if re.findall(self.regex[0], date_string):
-            return ImplicitCalculator(date_string)
+            return OffsetCalculator(date_string)
         else:
             return CronCalculator(date_string)
 
@@ -140,7 +145,7 @@ class TimeBasedTask(Task, ABC):
                  author_id,
                  channel_id=None,
                  server_id=None,
-                 label=None
+                 label=None,
                  ):
 
         Task.__init__(self, author_id=author_id, channel_id=channel_id, server_id=server_id, label=label)
@@ -169,6 +174,10 @@ class TimeBasedTask(Task, ABC):
     @next_date.setter
     def next_date(self, next_date: dt):
         self._next_date = next_date
+
+    @property
+    def delete(self):
+        return self.time_calc.delete
 
     def calc_next_date(self) -> dt:
         return self.time_calc.calculate_next_time(self.next_date)
