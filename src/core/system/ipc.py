@@ -62,7 +62,7 @@ class IPCPackageHandler(ABC):
         else:
             # next node does exist
             if self.next_node is not None:
-                self.next_node.parse_pkt(pkt)
+                return self.next_node.parse_pkt(pkt)
             else:
                 return None
 
