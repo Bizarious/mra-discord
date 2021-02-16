@@ -1,8 +1,7 @@
 import re
 from croniter import croniter as cr, CroniterBadCronError
-from datetime import datetime as dt, timedelta as td
+from datetime import datetime as dt
 from abc import ABC, abstractmethod
-from copy import deepcopy
 from core.enums import Dates
 from core.task.task_exceptions import TaskCreationError
 
@@ -99,7 +98,7 @@ class Task(ABC):
         self.server_id = server_id
         self.label = label
         self._creation_time = dt.now()
-        self._name = None
+        self._name = None   # the type of task
         self._kwargs = None
 
     @property
@@ -125,9 +124,12 @@ class Task(ABC):
     def creation_time_string(self, format_string: str) -> str:
         return self._creation_time.strftime(format_string)
 
-    @abstractmethod
     def to_json(self, format_string: str) -> dict:
-        pass
+        d = {"arguments": self.kwargs,
+             "extra": {"creation_time": self.creation_time_string(format_string),
+                       "type": self.name}}
+
+        return d
 
     def from_json(self, kwargs: dict):
         self._creation_time = dt.strptime(kwargs["extra"]["creation_time"], Dates.DATE_FORMAT_DETAIL.value)
@@ -179,6 +181,9 @@ class TimeBasedTask(Task, ABC):
     def delete(self):
         return self.time_calc.delete
 
+    def next_date_string(self):
+        return self.next_date.strftime(Dates.DATE_FORMAT.value)
+
     def calc_next_date(self) -> dt:
         return self.time_calc.calculate_next_time(self.next_date)
 
@@ -187,7 +192,11 @@ class TimeBasedTask(Task, ABC):
         pass
 
     def to_json(self, format_string: str) -> dict:
-        pass
+        d = Task.to_json(self, format_string)
+        d["extra"]["next_date"] = self.next_date_string()
+        d["extra"]["delete"] = self.delete
+
+        return d
 
 
 if __name__ == "__main__":

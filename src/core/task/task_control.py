@@ -40,14 +40,31 @@ class IPCTaskHandler(IPCPackageHandler):
 
 
 class TaskAdder(IPCTaskHandler):
-    cmd = ["add_task"]
+    cmd = ["add_task", "delete_task"]
 
-    def handle(self, pkt):
+    def add_task(self, pkt):
         name = pkt.task
         tsk = self.task_manager.task_factory.produce(name, **pkt.kwargs)
         tsk.next_date = tsk.calc_next_date()
         if tsk is not None:
             self.task_manager.add_tasks(tsk, author_id=pkt.author_id)
+
+    def delete_task(self, pkt):
+        pass
+
+    def handle(self, pkt):
+        if pkt.cmd == "add_task":
+            self.add_task(pkt)
+        elif pkt.cmd == "delete_task":
+            self.delete_task(pkt)
+
+
+class TaskGetter(IPCTaskHandler):
+    cmd = ["get_tasks"]
+
+    def handle(self, pkt):
+        dicts = self.task_manager.export_tasks(pkt.author_id, Dates.DATE_FORMAT.value)
+        pkt.pipe.send(dicts)
 
 
 class TaskManagerStopper(IPCTaskHandler):
@@ -68,7 +85,10 @@ class TaskFactory:
     def produce(self, name: str, **kwargs) -> Union[tk.Task, None]:
         if name in self.tasks.keys():
             task_class = self.tasks[name]
-            return task_class(**kwargs)
+            t: tk.Task = task_class(**kwargs)
+            t.kwargs = kwargs
+            t.name = name
+            return t
         return None
 
 
@@ -207,7 +227,7 @@ class TaskManager(Process):
         Process.__init__(self)
 
         # holds all classes which shall be instantiated and appended to the chain
-        self.nodes: [IPCTaskHandler] = [TaskManagerStopper, TaskAdder]
+        self.nodes: [IPCTaskHandler] = [TaskManagerStopper, TaskAdder, TaskGetter]
         self.ipc_handler: Union[None, IPCTaskHandler] = None
         self.register_chain()
 
@@ -229,6 +249,9 @@ class TaskManager(Process):
         self.ts = DefaultTimeBasedScheduler()  # the scheduler
 
     def get_task_class(self, name: str) -> Union[tk.Task, None]:
+        """
+        Returns the desired task class by name.
+        """
         if name in self.task_dict.keys():
             return self.task_dict[name]
         return None
@@ -237,10 +260,16 @@ class TaskManager(Process):
         return self.data.get_json(file="tasks", path="tasks")
 
     def register_chain(self):
+        """
+        Builds the chain of responsibility.
+        """
         for n in self.nodes:
             self.ipc_handler = n(self, self.ipc_handler)
 
     def register_task(self, module_path: str, file: str):
+        """
+        Registers a task decorated with "task".
+        """
         task_module = importlib.import_module(f'{module_path}.{file}')
 
         # search for objects
@@ -257,6 +286,9 @@ class TaskManager(Process):
                 self.task_dict[name] = task_class
 
     def register_all_tasks(self):
+        """
+        Registers all tasks in the paths.
+        """
         for path in self.paths.keys():
             if os.path.exists(path):
                 for file in os.listdir(path):
@@ -278,6 +310,23 @@ class TaskManager(Process):
                     self.tasks[author_id].remove(t)
                 self.ts.remove_task(t)
         self.ts.calc_next_date()
+
+    def get_task(self, author_id: int, index: int) -> Union[tk.Task, None]:
+        if author_id in self.tasks.keys():
+            if len(self.tasks[author_id]) >= index:
+                return self.tasks[author_id][index - 1]
+        return None
+
+    def export_tasks(self, author_id: int, format_string: str) -> list:
+        """
+        Exports properties of all tasks of a user as dict.
+        """
+        dicts = []
+        t: tk.Task
+        if author_id in self.tasks.keys():
+            for t in self.tasks[author_id]:
+                dicts.append(t.to_json(format_string))
+        return dicts
 
     def execute_task(self, tsk: tk.Task):
         te = TaskExecutor(tsk, self)
