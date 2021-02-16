@@ -40,9 +40,9 @@ class Tasks(commands.Cog):
         for i in range(len(tasks)):
             table.append([i + 1,
                           tasks[i]["extra"]["type"],
-                          tasks[i]["extra"]["label"],
+                          tasks[i]["arguments"]["label"],
                           tasks[i]["extra"]["creation_time"],
-                          tasks[i]["extra"]["next_time"]])
+                          tasks[i]["extra"]["next_date"]])
         await ctx.send(f"```{tab(table, headers=headers)}```")
 
     @commands.command("dt")
