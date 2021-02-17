@@ -1,4 +1,5 @@
 import re
+from typing import Union
 from croniter import croniter as cr, CroniterBadCronError
 from datetime import datetime as dt, timedelta as td
 from abc import ABC, abstractmethod
@@ -11,7 +12,7 @@ class TimeCalculator(ABC):
     The abstract class for the time calculator that is used by time-based tasks.
     """
 
-    def __init__(self, date_string):
+    def __init__(self, date_string: str):
         self.date_string = date_string
         self.delete = False
 
@@ -23,7 +24,7 @@ class TimeCalculator(ABC):
         pass
 
     @abstractmethod
-    def good_date_string(self) -> bool:
+    def good_date_string(self) -> Union[None, str]:
         """
         Checks, if the passed date_string is good.
         """
@@ -35,16 +36,24 @@ class CronCalculator(TimeCalculator):
     The cron-like calculator.
     """
 
+    def __init__(self, date_string: str, min_interval: int = 0):
+        TimeCalculator.__init__(self, date_string)
+        self.min_interval = min_interval
+
     def calculate_next_time(self, date_time: dt) -> dt:
         it = cr(self.date_string, date_time)
         return it.get_next(dt)
 
-    def good_date_string(self) -> bool:
+    def good_date_string(self) -> Union[None, str]:
         try:
-            cr(self.date_string, dt.now())
+            it = cr(self.date_string, dt.now())
+            a = it.get_next(dt)
+            b = it.get_next(dt)
+            if (b - a) < td(seconds=self.min_interval):
+                return f"Date string falls below the min interval of {self.min_interval}s."
         except CroniterBadCronError:
-            return False
-        return True
+            return "Bad date string"
+        return None
 
 
 class OffsetCalculator(TimeCalculator):
@@ -52,7 +61,7 @@ class OffsetCalculator(TimeCalculator):
     Uses "1h15m30s"-like strings.
     """
 
-    def __init__(self, date_string):
+    def __init__(self, date_string: str):
         TimeCalculator.__init__(self, date_string)
         self.regex = "[1-9]+[0-9]*[h|m|s]"
         self.delete = True
@@ -71,8 +80,8 @@ class OffsetCalculator(TimeCalculator):
                 date_time += td(seconds=int(time[:-1]))
         return date_time.replace(microsecond=0)
 
-    def good_date_string(self) -> bool:
-        return True
+    def good_date_string(self) -> Union[None, str]:
+        return None
 
 
 class AbstractDateStringParser(ABC):
@@ -84,7 +93,7 @@ class AbstractDateStringParser(ABC):
     regex: [str] = []
 
     @abstractmethod
-    def parse(self, date_string: str) -> TimeCalculator:
+    def parse(self, date_string: str, min_interval: int) -> TimeCalculator:
         pass
 
 
@@ -95,11 +104,11 @@ class DefaultDateStringParser(AbstractDateStringParser):
 
     regex = ["[1-9]+[0-9]*[h|m|s]"]
 
-    def parse(self, date_string: str) -> TimeCalculator:
+    def parse(self, date_string: str, min_interval: int) -> TimeCalculator:
         if re.findall(self.regex[0], date_string):
             return OffsetCalculator(date_string)
         else:
-            return CronCalculator(date_string)
+            return CronCalculator(date_string, min_interval)
 
 
 class Task(ABC):
@@ -167,13 +176,15 @@ class TimeBasedTask(Task, ABC):
                  channel_id=None,
                  server_id=None,
                  label=None,
+                 min_interval=0
                  ):
 
         Task.__init__(self, author_id=author_id, channel_id=channel_id, server_id=server_id, label=label)
 
-        self.time_calc: TimeCalculator = dsp.parse(date_string)
-        if not self.time_calc.good_date_string():
-            raise TaskCreationError("Bad date string")
+        self.time_calc: TimeCalculator = dsp.parse(date_string, min_interval)
+        check = self.time_calc.good_date_string()
+        if check is not None:
+            raise TaskCreationError(check)
 
         self._next_date: dt = dt.now()
 
@@ -223,5 +234,5 @@ class TimeBasedTask(Task, ABC):
 
 
 if __name__ == "__main__":
-    o = OffsetCalculator("1h20m15s")
-    print(o.calculate_next_time(dt.now()))
+    o = CronCalculator("20 19 * * *", 60)
+    print(o.good_date_string())

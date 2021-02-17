@@ -1,5 +1,6 @@
 import importlib
 import os
+import time
 from abc import abstractmethod, ABC
 from typing import Union
 from core.task import task_base as tk
@@ -9,10 +10,10 @@ from multiprocessing import Process
 from threading import Thread, Lock
 from core.containers import TaskContainer
 from core.system import IPC
-import time
 from core.enums import Dates
 from core.database import Data, ConfigManager
 from core.system import IPCPackageHandler
+from core.task.task_exceptions import TaskCreationError
 
 
 def task(name):
@@ -43,7 +44,10 @@ class TaskAdder(IPCTaskHandler):
 
     def add_task(self, pkt):
         name = pkt.task
-        tsk = self.task_manager.task_factory.produce(name, **pkt.kwargs)
+        try:
+            tsk = self.task_manager.task_factory.produce(name, **pkt.kwargs)
+        except TaskCreationError as e:
+            return e
         tsk.next_date = tsk.calc_next_date()
         if tsk is not None:
             self.task_manager.add_tasks(tsk, author_id=pkt.author_id)
@@ -56,9 +60,9 @@ class TaskAdder(IPCTaskHandler):
 
     def handle(self, pkt):
         if pkt.cmd == "add_task":
-            self.add_task(pkt)
+            return self.add_task(pkt)
         elif pkt.cmd == "delete_task":
-            self.delete_task(pkt)
+            return self.delete_task(pkt)
 
 
 class TaskGetter(IPCTaskHandler):
