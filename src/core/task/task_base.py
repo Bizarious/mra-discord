@@ -113,6 +113,10 @@ class Task(ABC):
     def creation_time(self) -> dt:
         return self._creation_time
 
+    @creation_time.setter
+    def creation_time(self, time: dt):
+        self._creation_time = time
+
     @property
     def name(self) -> str:
         return self._name
@@ -132,8 +136,8 @@ class Task(ABC):
         return d
 
     def from_json(self, kwargs: dict):
-        self._creation_time = dt.strptime(kwargs["extra"]["creation_time"], Dates.DATE_FORMAT_DETAIL.value)
-        self.name = kwargs["extra"]["type"]
+        self.creation_time = dt.strptime(kwargs["creation_time"], Dates.DATE_FORMAT_DETAIL.value)
+        self.name = kwargs["type"]
 
     @abstractmethod
     def run(self):
@@ -197,6 +201,10 @@ class TimeBasedTask(Task, ABC):
         d["extra"]["delete"] = self.delete
 
         return d
+
+    def from_json(self, kwargs: dict):
+        Task.from_json(self, kwargs)
+        self.next_date = dt.strptime(kwargs["next_date"], Dates.DATE_FORMAT.value)
 
 
 if __name__ == "__main__":

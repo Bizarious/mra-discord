@@ -11,7 +11,6 @@ from core.containers import TaskContainer
 from core.system import IPC
 import time
 from core.enums import Dates
-from core.task.task_exceptions import UserHasNoTasksException, TaskIdDoesNotExistException, TaskCreationError
 from core.database import Data, ConfigManager
 from core.system import IPCPackageHandler
 
@@ -85,12 +84,14 @@ class TaskFactory:
     def __init__(self, tasks: dict):
         self.tasks = tasks
 
-    def produce(self, name: str, **kwargs) -> Union[tk.TimeBasedTask, None]:
+    def produce(self, name: str, extra_dict: dict = None, **kwargs) -> Union[tk.TimeBasedTask, None]:
         if name in self.tasks.keys():
             task_class = self.tasks[name]
             t: tk.TimeBasedTask = task_class(**kwargs)
             t.kwargs = kwargs
             t.name = name
+            if extra_dict is not None:
+                t.from_json(extra_dict)
             return t
         return None
 
@@ -263,6 +264,13 @@ class TaskManager(Process):
     def load_tasks(self) -> list:
         return self.data.get_json(file="tasks", path="tasks")
 
+    def save_tasks(self):
+        tasks = []
+        for author in self.tasks.keys():
+            for t in self.export_tasks(author, Dates.DATE_FORMAT_DETAIL.value):
+                tasks.append(t)
+        self.data.set_json(file="tasks", path="tasks", data=tasks)
+
     def register_chain(self):
         """
         Builds the chain of responsibility.
@@ -306,6 +314,7 @@ class TaskManager(Process):
             self.tasks[author_id].append(t)
             self.ts.add_task(t)
         self.ts.calc_next_date()
+        self.save_tasks()
 
     def remove_tasks(self, *tsk: tk.Task, author_id: int):
         if author_id in self.tasks.keys():
@@ -314,12 +323,32 @@ class TaskManager(Process):
                     self.tasks[author_id].remove(t)
                     self.ts.remove_task(t)
         self.ts.calc_next_date()
+        self.save_tasks()
 
     def get_task(self, author_id: int, index: int) -> Union[tk.Task, None]:
         if author_id in self.tasks.keys():
             if len(self.tasks[author_id]) >= index:
                 return self.tasks[author_id][index - 1]
         return None
+
+    def import_tasks(self):
+        """
+        Imports tasks from a list. Used at startup to load all old tasks.
+        """
+        task_list = self.load_tasks()
+        tasks = {}
+        for t in task_list:
+            author = t["arguments"]["author_id"]
+            name = t["extra"]["type"]
+            args = t["arguments"]
+            extra = t["extra"]
+            tsk = self.task_factory.produce(name, extra, **args)
+            if author not in tasks.keys():
+                tasks[author] = []
+            tasks[author].append(tsk)
+
+        for a in tasks.keys():
+            self.add_tasks(*tasks[a], author_id=a)
 
     def export_tasks(self, author_id: int, format_string: str) -> list:
         """
@@ -338,6 +367,7 @@ class TaskManager(Process):
         te.start()
 
     def run(self) -> None:
+        self.import_tasks()
         while True:
             pkt = self.ipc.check_queue("task")
             if pkt is not None:
