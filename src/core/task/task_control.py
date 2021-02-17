@@ -131,15 +131,16 @@ class DefaultTimeBasedScheduler(TimeBasedScheduler):
     The default implementation of the scheduler.
     """
 
-    def schedule(self) -> Union[tk.Task, None]:
+    def schedule(self) -> Union[tk.TimeBasedTask, None]:
         now = dt.now()
 
         # now between 5 seconds from next date
         if self.next_date is not None:
             if self.next_date <= now <= self.next_date + td(seconds=5):
                 tsk: tk.TimeBasedTask = self.task_queue.get()
-                tsk.next_date = tsk.calc_next_date()
-                self.task_queue.put(tsk)
+                if not tsk.delete:
+                    tsk.next_date = tsk.calc_next_date()
+                    self.task_queue.put(tsk)
                 self.calc_next_date()
                 return tsk
         return None
@@ -338,17 +339,31 @@ class TaskManager(Process):
         task_list = self.load_tasks()
         tasks = {}
         for t in task_list:
+            delete = t["extra"]["delete"]
+            next_date = dt.strptime(t["extra"]["next_date"], Dates.DATE_FORMAT.value)
+
+            # check if one-time task is already expired
+            if delete and next_date < dt.now():
+                continue
+
             author = t["arguments"]["author_id"]
             name = t["extra"]["type"]
             args = t["arguments"]
             extra = t["extra"]
             tsk = self.task_factory.produce(name, extra, **args)
+
+            # fast forward until next date is in the future
+            while tsk.next_date < dt.now():
+                tsk.next_date = tsk.calc_next_date()
+
             if author not in tasks.keys():
                 tasks[author] = []
             tasks[author].append(tsk)
 
         for a in tasks.keys():
             self.add_tasks(*tasks[a], author_id=a)
+
+        self.save_tasks()
 
     def export_tasks(self, author_id: int, format_string: str) -> list:
         """
@@ -361,10 +376,19 @@ class TaskManager(Process):
                 dicts.append(t.to_json(format_string))
         return dicts
 
-    def execute_task(self, tsk: tk.Task):
+    def execute_task(self, tsk: tk.TimeBasedTask):
         te = TaskExecutor(tsk, self)
         self.running_tasks.append(te)
         te.start()
+
+        # delete task if it has the delete flag
+        if tsk.delete:
+            self.tasks[tsk.author_id].remove(tsk)
+
+    def stop(self):
+        for th in self.running_tasks:
+            th.join()
+        self.save_tasks()
 
     def run(self) -> None:
         self.import_tasks()
@@ -373,6 +397,7 @@ class TaskManager(Process):
             if pkt is not None:
                 result = self.ipc_handler.parse_pkt(pkt)
                 if result == "stop":
+                    self.stop()
                     break
             tsk = self.ts.schedule()
             if tsk is not None:
