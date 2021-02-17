@@ -4,12 +4,24 @@ from core.permissions import is_owner
 from core.database import ConfigManager
 from core.bot import handle_ipc_commands
 from core.bot import service
+from core.task import IPCTaskHandler
+
+
+class TaskPing(IPCTaskHandler):
+    cmd = ["ping"]
+
+    def handle(self, _):
+        return "pong"
 
 
 class System(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.config: ConfigManager = self.bot.config
+
+        # registers the ping for service
+        t = self.bot.ipc.pack()
+        self.bot.ipc.send(dst="task", package=t, cmd="append_node", node=TaskPing)
 
         self.task_check = True
 
