@@ -69,6 +69,15 @@ class IPCPackageHandler(ABC):
             else:
                 return None
 
+    def append(self, node):
+        """
+        Appends a node at the end of the chain.
+        """
+        if self.next_node is None:
+            self.next_node = node
+        else:
+            self.next_node.append(node)
+
     @abstractmethod
     def handle(self, pkt):
         pass
