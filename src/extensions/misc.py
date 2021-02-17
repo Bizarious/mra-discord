@@ -37,7 +37,7 @@ class AbstractChooser(ABC):
         for u in user_set:
             n_u = users.count(u)
             n = len(users)
-            i = round((n_u/n)*100, 1)
+            i = round((n_u / n) * 100, 1)
             result += f"\n{u.mention}: {i}%"
         return result
 
@@ -73,6 +73,7 @@ class DynamicChooser(AbstractChooser):
     Chooser Implementation for dynamic use. Probabilities do change when someone is chosen to ensure that everyone
     has a chance.
     """
+
     def __init__(self, bot):
         AbstractChooser.__init__(self, bot)
 
@@ -178,15 +179,21 @@ class Misc(commands.Cog):
                               message_args=message_args,
                               date_string=date_string,
                               label=label,
-                              number=int(number)
                               )
 
-        self.bot.ipc.send(dst="task",
-                          package=t, cmd="task",
-                          task="Reminder",
-                          author_id=ctx.message.author.id,
-                          channel_id=ctx.message.channel.id
-                          )
+        pipe = self.bot.ipc.send(dst="task",
+                                 package=t, cmd="add_task",
+                                 task="Reminder",
+                                 author_id=ctx.message.author.id,
+                                 channel_id=ctx.message.channel.id,
+                                 create_pipe=True
+                                 )
+        timeout = pipe.poll(2)
+        if not timeout:
+            raise RuntimeError("The task manager did not answer. There must be a problem.")
+        answer = pipe.recv()
+        if answer is not None:
+            await ctx.send(answer)
 
     @commands.command()
     async def info(self, ctx):
