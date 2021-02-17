@@ -39,7 +39,7 @@ class System(commands.Cog):
             await self.bot.shutdown()
         else:
             t = self.bot.ipc.pack(author_id=0, date_string=date_string, mode="shutdown")
-            self.bot.ipc.send(dst="task", package=t, cmd="task", task="Shutdown", author_id=0)
+            self.bot.ipc.send(dst="task", package=t, cmd="add_task", task="Shutdown", author_id=0)
 
     @commands.command(hidden=True)
     @commands.check(is_owner)
@@ -55,7 +55,7 @@ class System(commands.Cog):
             await self.bot.do_restart()
         else:
             t = self.bot.ipc.pack(author_id=0, date_string=date_string, mode="restart")
-            self.bot.ipc.send(dst="task", package=t, cmd="task", task="Shutdown", author_id=0)
+            self.bot.ipc.send(dst="task", package=t, cmd="add_task", task="Shutdown", author_id=0)
 
     @commands.command(hidden=True)
     @commands.check(is_owner)
