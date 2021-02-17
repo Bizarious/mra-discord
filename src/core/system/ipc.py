@@ -57,7 +57,10 @@ class IPCPackageHandler(ABC):
 
         # command is known
         if pkt.cmd in self.cmd:
-            return self.handle(pkt)
+            result = self.handle(pkt)
+            if pkt.pipe is not None:
+                pkt.pipe.send(result)
+            return result
 
         else:
             # next node does exist

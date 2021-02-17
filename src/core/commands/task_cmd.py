@@ -75,12 +75,13 @@ class Tasks(commands.Cog):
                 int(task_id)
             except ValueError:
                 raise RuntimeError("task_id must be 'all' or a valid number.")
+            task_id = int(task_id)
 
         t = self.bot.ipc.pack()
         pipe = self.bot.ipc.send(dst="task",
                                  create_pipe=True,
                                  package=t,
-                                 cmd="del_task",
+                                 cmd="delete_task",
                                  author_id=author_id,
                                  task_id=task_id)
         timeout = pipe.poll(2)

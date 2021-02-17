@@ -32,7 +32,7 @@ class IPCTaskHandler(IPCPackageHandler):
         IPCPackageHandler.__init__(self, next_node)
 
         # pointer to the task manager for calling functions
-        self.task_manager = task_manager
+        self.task_manager: TaskManager = task_manager
 
     @abstractmethod
     def handle(self, pkt):
@@ -50,7 +50,10 @@ class TaskAdder(IPCTaskHandler):
             self.task_manager.add_tasks(tsk, author_id=pkt.author_id)
 
     def delete_task(self, pkt):
-        pass
+        index = pkt.task_id
+        author_id = pkt.author_id
+        tsk = self.task_manager.get_task(author_id, index)
+        self.task_manager.remove_tasks(tsk, author_id=author_id)
 
     def handle(self, pkt):
         if pkt.cmd == "add_task":
@@ -64,7 +67,7 @@ class TaskGetter(IPCTaskHandler):
 
     def handle(self, pkt):
         dicts = self.task_manager.export_tasks(pkt.author_id, Dates.DATE_FORMAT.value)
-        pkt.pipe.send(dicts)
+        return dicts
 
 
 class TaskManagerStopper(IPCTaskHandler):
@@ -82,10 +85,10 @@ class TaskFactory:
     def __init__(self, tasks: dict):
         self.tasks = tasks
 
-    def produce(self, name: str, **kwargs) -> Union[tk.Task, None]:
+    def produce(self, name: str, **kwargs) -> Union[tk.TimeBasedTask, None]:
         if name in self.tasks.keys():
             task_class = self.tasks[name]
-            t: tk.Task = task_class(**kwargs)
+            t: tk.TimeBasedTask = task_class(**kwargs)
             t.kwargs = kwargs
             t.name = name
             return t
@@ -109,8 +112,9 @@ class TimeBasedScheduler(ABC):
         self.task_queue.put(tsk)
 
     def remove_task(self, *tsk: tk.Task):
-        if tsk in self.task_queue.queue:
-            self.task_queue.queue.remove(tsk)
+        for t in tsk:
+            if t in self.task_queue.queue:
+                self.task_queue.queue.remove(t)
 
     def calc_next_date(self):
         if not self.task_queue.empty():
@@ -308,7 +312,7 @@ class TaskManager(Process):
             for t in tsk:
                 if t in self.tasks[author_id]:
                     self.tasks[author_id].remove(t)
-                self.ts.remove_task(t)
+                    self.ts.remove_task(t)
         self.ts.calc_next_date()
 
     def get_task(self, author_id: int, index: int) -> Union[tk.Task, None]:
