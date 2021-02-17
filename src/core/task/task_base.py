@@ -1,6 +1,6 @@
 import re
 from croniter import croniter as cr, CroniterBadCronError
-from datetime import datetime as dt
+from datetime import datetime as dt, timedelta as td
 from abc import ABC, abstractmethod
 from core.enums import Dates
 from core.task.task_exceptions import TaskCreationError
@@ -54,13 +54,25 @@ class OffsetCalculator(TimeCalculator):
 
     def __init__(self, date_string):
         TimeCalculator.__init__(self, date_string)
+        self.regex = "[1-9]+[0-9]*[h|m|s]"
         self.delete = True
+        self.matches = self.calc_matches()
+
+    def calc_matches(self):
+        return re.findall(self.regex, self.date_string)
 
     def calculate_next_time(self, date_time: dt) -> dt:
-        pass
+        for time in self.matches:
+            if time[-1] == "h":
+                date_time += td(hours=int(time[:-1]))
+            elif time[-1] == "m":
+                date_time += td(minutes=int(time[:-1]))
+            elif time[-1] == "s":
+                date_time += td(seconds=int(time[:-1]))
+        return date_time.replace(microsecond=0)
 
     def good_date_string(self) -> bool:
-        pass
+        return True
 
 
 class AbstractDateStringParser(ABC):
@@ -91,6 +103,9 @@ class DefaultDateStringParser(AbstractDateStringParser):
 
 
 class Task(ABC):
+    """
+    Abstract class for tasks in general.
+    """
 
     def __init__(self, *, author_id, channel_id=None, server_id=None, label=None):
         self.author_id = author_id
@@ -208,7 +223,5 @@ class TimeBasedTask(Task, ABC):
 
 
 if __name__ == "__main__":
-    t = TimeBasedTask(date_string="5 20 * * * */5", author_id=0)
-    for _ in range(5):
-        t.next_date = t.calc_next_date()
-        print(t.next_date)
+    o = OffsetCalculator("1h20m15s")
+    print(o.calculate_next_time(dt.now()))
