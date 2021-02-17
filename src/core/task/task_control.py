@@ -69,6 +69,23 @@ class TaskGetter(IPCTaskHandler):
         return dicts
 
 
+class ChainAppender(IPCTaskHandler):
+    cmd = ["append_node"]
+
+    def handle(self, pkt):
+        if pkt.node not in self.task_manager.extra_nodes:
+            self.task_manager.extra_nodes.append(pkt.node)
+            self.append(pkt.node(self.task_manager, None))
+
+
+class TaskManagerStarter(IPCTaskHandler):
+    cmd = ["start"]
+
+    def handle(self, pkt):
+        self.task_manager.import_tasks()
+        self.task_manager.start_allowed = True
+
+
 class TaskManagerStopper(IPCTaskHandler):
     cmd = ["stop"]
 
@@ -233,7 +250,13 @@ class TaskManager(Process):
         Process.__init__(self)
 
         # holds all classes which shall be instantiated and appended to the chain
-        self.nodes: [IPCTaskHandler] = [TaskManagerStopper, TaskAdder, TaskGetter]
+        self.nodes: [IPCTaskHandler] = [ChainAppender,
+                                        TaskManagerStopper,
+                                        TaskManagerStarter,
+                                        TaskAdder,
+                                        TaskGetter
+                                        ]
+        self.extra_nodes = []
         self.ipc_handler: Union[None, IPCTaskHandler] = None
         self.register_chain()
 
@@ -253,6 +276,8 @@ class TaskManager(Process):
         self.register_all_tasks()
         self.task_factory = TaskFactory(self.task_dict)
         self.ts = DefaultTimeBasedScheduler()  # the scheduler
+
+        self.start_allowed = False
 
     def get_task_class(self, name: str) -> Union[tk.Task, None]:
         """
@@ -384,6 +409,7 @@ class TaskManager(Process):
         # delete task if it has the delete flag
         if tsk.delete:
             self.tasks[tsk.author_id].remove(tsk)
+            self.save_tasks()
 
     def stop(self):
         for th in self.running_tasks:
@@ -391,17 +417,21 @@ class TaskManager(Process):
         self.save_tasks()
 
     def run(self) -> None:
-        self.import_tasks()
         while True:
+
+            # checks the queue for incoming packages
             pkt = self.ipc.check_queue("task")
             if pkt is not None:
                 result = self.ipc_handler.parse_pkt(pkt)
                 if result == "stop":
                     self.stop()
                     break
-            tsk = self.ts.schedule()
-            if tsk is not None:
-                self.execute_task(tsk)
+
+            # starts the scheduling when ready
+            if self.start:
+                tsk = self.ts.schedule()
+                if tsk is not None:
+                    self.execute_task(tsk)
             time.sleep(0.2)
 
 
