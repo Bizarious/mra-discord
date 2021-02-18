@@ -1,6 +1,6 @@
 from discord.ext import commands
-from core.permissions import Permissions, is_owner
-from core.permissions.errors import GroupUserException
+from core.permissions import Permissions, is_owner, is_admin_or_higher, is_it_me, Rank
+from core.checks import is_integer
 
 
 class PermissionsHandler(commands.Cog, name="Permissions Handler"):
@@ -8,131 +8,91 @@ class PermissionsHandler(commands.Cog, name="Permissions Handler"):
         self.bot = bot
         self.permissions: Permissions = self.bot.permit
 
-    def check_default_users(self, uid: int):
-        self.permissions.add_to_default_groups(uid)
-
-    @commands.command("autg", hidden=True)
-    @commands.check(is_owner)
-    async def add_user_to_group(self, ctx, uid, group):
+    @commands.command("set-rank")
+    async def set_rank(self, ctx, user_id, rank):
         """
-        Adds a user to a group.
+        Sets the rank for a user.
 
-        uid:
+        user_id:
 
             The users id.
 
-        group:
+        rank:
 
-            The group name.
+            The rank the user shall have. Available are:
+                admin
+                mod
+                user
         """
+
+        is_integer(user_id)
+        user_id = int(user_id)
+        # if is_it_me(ctx, user_id):
+        #     await ctx.send("You cannot set your own rank.")
+        #     return
+
         try:
-            int(uid)
-        except ValueError:
-            raise RuntimeError(f"'{uid}' is no valid number.")
-        if int(uid) not in self.permissions.known_users:
-            raise GroupUserException(f"The user of the id '{uid}' is not known.")
-        if int(uid) == ctx.author.id and not is_owner(ctx):
-            raise GroupUserException(f"You cannot add yourself to a group.")
+            rank = Rank[rank.upper()]
+        except KeyError:
+            await ctx.send(f"The rank '{rank}' does not exist. Please choose one of the following:\n"
+                           f"admin\n"
+                           f"mod\n"
+                           f"user")
+            return
 
-        self.permissions.add_to_group(int(uid), group)
-        await ctx.send(f"Added <@{uid}> to '{group}'.")
+        user_rank = self.permissions.get_rank_id(user_id)
+        if user_rank <= rank.value:
+            await ctx.send(f"You cannot apply a rank that is equal or higher than yours.")
+            return
 
-    @commands.command("rufg", hidden=True)
-    @commands.check(is_owner)
-    async def remove_user_from_group(self, ctx, uid, group):
+        self.permissions.set_rank(user_id, rank)
+
+    @commands.group("permit-rule")
+    async def permit_rule(self, ctx):
+        if ctx.invoked_subcommand is None:
+            await ctx.send("Please use a subcommand.")
+
+    @permit_rule.command()
+    async def allow(self, ctx, user_id, cmd):
         """
-        Removes a user from a group.
+        Explicitly allows a user to use a command.
 
-        uid:
+        user_id:
 
             The users id.
 
-        group:
+        cmd:
 
-            The group name.
+            The command the user shall be allowed to issue.
         """
-        try:
-            int(uid)
-        except ValueError:
-            raise RuntimeError(f"'{uid}' is no valid number.")
-        if int(uid) not in self.permissions.known_users:
-            raise GroupUserException(f"The user of the id '{uid}' is not known.")
-        if int(uid) == ctx.author.id and not is_owner(ctx):
-            raise GroupUserException(f"You cannot remove yourself from a group.")
 
-        self.permissions.remove_from_group(int(uid), group)
-        await ctx.send(f"Removed <@{uid}> from '{group}'.")
+        is_integer(user_id)
+        user_id = int(user_id)
+        # if is_it_me(ctx, user_id):
+        #     await ctx.send("You cannot allow yourself to use a command.")
+        #     return
 
-    @commands.command("deluser", hidden=True)
-    @commands.check(is_owner)
-    async def delete_user(self, ctx, uid):
-        """
-        Removes a user from all groups and the list of known users.
+        command = self.bot.get_command(cmd)
+        if command is None:
+            await ctx.send(f"The command '{cmd}' does not exist.")
+            return
 
-        uid:
+        # if self.permissions.get_rank_id(user_id) >= self.permissions.get_rank_id(ctx.author.id):
+        #     await ctx.send("You cannot allow a user to use this command "
+        #                    "if the user has the same or higher rank as you.")
+        #     return
 
-            The users id.
-        """
-        try:
-            int(uid)
-        except ValueError:
-            raise RuntimeError(f"'{uid}' is no valid number.")
+        self.permissions.allow(user_id, cmd)
 
-        self.permissions.delete_user(int(uid))
-        await ctx.send(f"Removed <@{uid}> from all groups.")
+    @permit_rule.command()
+    @commands.check(is_admin_or_higher)
+    async def test2(self, _):
+        print("Test 2")
 
-    @commands.command("resetperm", hidden=True)
-    @commands.check(is_owner)
-    async def delete_all_users(self, ctx):
-        """
-        Removes all users. Serves as a 'reset' of the permissions state.
-        """
-        self.permissions.delete_all_users()
-        await ctx.send("Removed all users from the permissions.")
-
-    @commands.command("adu", hidden=True)
-    @commands.check(is_owner)
-    async def set_default_permissions(self, ctx):
-        """
-        Discovers unknown users and adds them to the default groups.
-        """
-        users = [u.id for u in self.bot.users if u != self.bot.user]
-        counter = self.permissions.add_to_default_groups(*users)
-        await ctx.send(f"```Added {counter} new users to the default groups.```")
-
-    @commands.command("showgr", hidden=True)
-    @commands.check(is_owner)
-    async def get_groups(self, ctx):
-        """
-        Displays all available groups.
-        """
-        groups = self.permissions.groups.keys()
-        result = "```Available groups:\n\n"
-        for g in groups:
-            result += f"{g}\n"
-        result += "```"
-
-        await ctx.send(result)
-
-    @commands.command("setowner", hidden=True)
-    @commands.check(is_owner)
-    async def set_bot_owner(self, ctx, uid):
-        """
-        Sets the bot owner.
-        """
-        if int(uid) not in self.permissions.known_users:
-            raise RuntimeError("This user is not known.")
-        self.permissions.bot_owner = uid
-        await ctx.send(f"Congratulations <@{uid}>, you are now the owner of this bot.")
-
-    @commands.Cog.listener()
-    async def on_ready(self):
-        users = [u.id for u in self.bot.users if u != self.bot.user]
-        self.permissions.add_to_default_groups(*users)
-
-    @commands.Cog.listener()
-    async def on_member_join(self, user):
-        self.permissions.add_to_default_groups(user.id)
+    @commands.command()
+    @commands.check(is_admin_or_higher)
+    async def test(self, _):
+        print("Test")
 
 
 def setup(bot):
