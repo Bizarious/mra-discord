@@ -159,7 +159,7 @@ class BotClient(commands.Bot, CogMethodHandler):
     async def on_command_error(self, ctx, exception):
         try:
             if isinstance(exception, commands.errors.CheckFailure):
-                await ctx.send("You have not the permissions to issue this command.")
+                await ctx.send("You do not have the permissions to issue this command.")
             elif isinstance(exception, commands.CommandInvokeError):
                 if isinstance(exception.original, discord.Forbidden):
                     await ctx.send("I am not allowed to do that")
