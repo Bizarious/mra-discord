@@ -1,6 +1,6 @@
 class ExtensionPackage:
 
-    def __init__(self, cls, name: str = None):
+    def __init__(self, cls, name):
         self._cls = cls
         self._name = name
 
@@ -11,4 +11,8 @@ class ExtensionPackage:
     @property
     def cls(self):
         return self._cls
+
+
+def extension(cls):
+    return ExtensionPackage(cls, cls.__name__)
     
