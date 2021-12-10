@@ -1,5 +1,6 @@
 from __future__ import annotations
 from typing import TypeVar, Union
+from threading import Lock
 import json
 import os
 
@@ -24,6 +25,9 @@ class Savable:
 
         # used to control if changes should be saved immediately
         self._do_save = True
+
+        # a lock for thread safety
+        self._lock = Lock()
 
     @property
     def parent(self) -> Savable:
@@ -58,12 +62,21 @@ class DataDict(Savable, dict):
         Savable.__init__(self, parent, path=path)
 
     def __setitem__(self, key, value):
+        self._lock.acquire()
+
         dict.__setitem__(self, key, convert(value, self))
         self.save()
 
+        self._lock.release()
+
     def pop(self, key: _KT) -> _VT:
+        self._lock.acquire()
+
         value = dict.pop(self, key)
         self.save()
+
+        self._lock.release()
+
         return value
 
 
@@ -77,16 +90,29 @@ class DataList(Savable, list):
         Savable.__init__(self, parent, path=path)
 
     def append(self, __object: _T) -> None:
+        self._lock.acquire()
+
         list.append(self, convert(__object, self))
         self.save()
 
+        self._lock.release()
+
     def remove(self, __value: _T) -> None:
+        self._lock.acquire()
+
         list.remove(self, __value)
         self.save()
 
+        self._lock.release()
+
     def pop(self, __index: int = ...) -> _T:
+        self._lock.acquire()
+
         element = list.pop(self, __index)
         self.save()
+
+        self._lock.release()
+
         return element
 
 
@@ -109,10 +135,15 @@ class DataProvider:
         # maps all data elements (dicts, lists) onto their paths
         self._data_elements = {}
 
+        # a lock for thread safety
+        self._lock = Lock()
+
     def get_json_data(self, path_from_data_dir: str, default_value: Union[list, dict] = None):
+        self._lock.acquire()
+
         # if element already exists, return that instead
         if path_from_data_dir in self._data_elements:
-            print("Loaded existing element")
+            self._lock.release()
             return self._data_elements[path_from_data_dir]
 
         # if it does not exist, it is created
@@ -129,5 +160,5 @@ class DataProvider:
             content = json.load(f)
         data_element = convert(content, path=required_path)
         self._data_elements[path_from_data_dir] = data_element
-        print("Loaded from file")
+        self._lock.release()
         return data_element
