@@ -9,6 +9,9 @@ if TYPE_CHECKING:
 
 @extension(auto_load=True)
 class System(commands.Cog):
+    """
+    Provides commands for controlling the bot on the system level
+    """
 
     def __init__(self, bot: "Bot"):
         self.bot = bot
@@ -16,6 +19,9 @@ class System(commands.Cog):
     @commands.command()
     @owner()
     async def stop(self, _):
+        """
+        Stops the bot
+        """
         await self.bot.stop()
 
     @commands.command()
