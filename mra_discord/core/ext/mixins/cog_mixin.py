@@ -9,7 +9,13 @@ if TYPE_CHECKING:
 class ExtensionHandlerCogMixin(ExtensionHandlerMixin):
 
     def __init__(self):
-        self._to_be_executed_on_extension_loading.append(self.register_cog)
+        def load_cog(_, cog: "Cog"):
+            self._interface.add_cog(cog)
 
-    def register_cog(self, _, cog: "Cog"):
-        self._interface.add_cog(cog)
+        def unload_cog(cog: "Cog"):
+            self._interface.remove_cog(cog.qualified_name)
+
+        self._to_be_executed_on_extension_loading.append(load_cog)
+        self._to_be_executed_on_extension_unloading.append(unload_cog)
+
+
