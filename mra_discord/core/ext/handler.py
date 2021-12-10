@@ -135,5 +135,6 @@ class ExtensionHandler:
         self._unload_extension(name)
 
     def unload_all_extensions(self):
-        for extension_name in self._extensions:
+        extension_names = list(self._extensions.keys())[:]
+        for extension_name in extension_names:
             self._unload_extension(extension_name)
