@@ -1,0 +1,2 @@
+class OnMessageLimiterError(Exception):
+    pass

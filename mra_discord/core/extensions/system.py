@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 from nextcord.ext import commands
-from mra_discord.core.ext import extension
+from core.ext import extension
 from core.permissions import owner
 
 if TYPE_CHECKING:

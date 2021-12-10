@@ -10,7 +10,7 @@ import nextcord
 
 class BotExtensionHandler(ExtensionHandler, ExtensionHandlerCogMixin):
 
-    def __init__(self, bot, *paths):
+    def __init__(self, bot: "Bot", *paths):
         ExtensionHandler.__init__(self, bot, *paths)
         ExtensionHandlerCogMixin.__init__(self)
 
