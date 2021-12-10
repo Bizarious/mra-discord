@@ -136,5 +136,7 @@ custom_extensions/
 
 .idea
 
+__token__.py
+
 
 
