@@ -16,3 +16,7 @@ class ExtensionNotLoadedError(ExtensionError):
 
 class ExtensionCannotUnloadError(ExtensionError):
     pass
+
+
+class OnMessageLimiterError(Exception):
+    pass
