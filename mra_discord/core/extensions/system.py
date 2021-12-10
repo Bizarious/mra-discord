@@ -2,7 +2,7 @@ from nextcord.ext import commands
 from mra_discord.core.ext import extension
 
 
-@extension
+@extension(auto_load=True)
 class System(commands.Cog):
 
     def __init__(self, bot):

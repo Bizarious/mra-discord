@@ -64,7 +64,7 @@ class CustomHelpCommand(commands.MinimalHelpCommand):
     send_group_help = send_command_help
 
 
-@extension
+@extension(name="Help", auto_load=True)
 class HelpExtension(commands.Cog, name="Help"):
 
     def __init__(self, bot):
