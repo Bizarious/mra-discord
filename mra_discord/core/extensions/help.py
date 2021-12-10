@@ -73,4 +73,4 @@ class HelpExtension(commands.Cog, name="Help"):
         bot.help_command.cog = self
 
     def cog_unload(self) -> None:
-        self.bot.help__command = self._original_help_command
+        self.bot.help_command = self._original_help_command
