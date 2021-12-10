@@ -1,10 +1,11 @@
 from nextcord.ext import commands
 from typing import Any
+from .data import DataProvider
+from .permissions import Permissions
 from core.ext import ExtensionHandler
 from core.ext.mixins import ExtensionHandlerCogMixin
 
 import nextcord
-import core.data as data
 
 
 class BotExtensionHandler(ExtensionHandler, ExtensionHandlerCogMixin):
@@ -30,10 +31,21 @@ class Bot(commands.Bot):
         self._extension_handler.load_extensions_from_paths()
 
         # the data manager
-        self._data_provider = data.DataProvider(data_path)
+        self._data_provider = DataProvider(data_path)
+
+        # the permissions manager
+        self._permissions = Permissions(self._data_provider)
 
         # flags
         self._running = False
+
+    @property
+    def data_provider(self):
+        return self._data_provider
+
+    @property
+    def permissions(self):
+        return self._permissions
 
     async def on_ready(self):
         print("Ready")
@@ -45,4 +57,5 @@ class Bot(commands.Bot):
         commands.Bot.run(self, *args, **kwargs)
 
     async def stop(self):
+        self._extension_handler.unload_all_extensions()
         await self.close()
