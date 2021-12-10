@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import TypeVar, Union
 import json
+import os
 
 _T = TypeVar("_T")
 _KT = TypeVar("_KT")
@@ -89,15 +90,44 @@ class DataList(Savable, list):
         return element
 
 
-def convert(__object: _T, parent: Savable = None) -> Union[_T, DataList, DataDict]:
+def convert(__object: _T, parent: Savable = None, path: str = None) -> Union[_T, DataList, DataDict]:
     """
     Converts lists into DataLists and dicts into DataDicts.
     """
     if isinstance(__object, dict):
-        return DataDict(__object, parent)
+        return DataDict(__object, parent, path=path)
     elif isinstance(__object, list):
-        return DataList(__object, parent)
+        return DataList(__object, parent, path=path)
     return __object
 
 
+class DataProvider:
 
+    def __init__(self, data_path: str):
+        self._data_path = data_path
+
+        # maps all data elements (dicts, lists) onto their paths
+        self._data_elements = {}
+
+    def get_json_data(self, path_from_data_dir: str, default_value: Union[list, dict] = None):
+        # if element already exists, return that instead
+        if path_from_data_dir in self._data_elements:
+            print("Loaded existing element")
+            return self._data_elements[path_from_data_dir]
+
+        # if it does not exist, it is created
+        required_path = f"{self._data_path}/{path_from_data_dir}"
+        if default_value is None:
+            default_value = {}
+
+        if not os.path.exists(required_path):
+            os.makedirs(os.path.dirname(required_path), exist_ok=True)
+            with open(required_path, "w") as f:
+                json.dump(default_value, f)
+
+        with open(required_path, "r") as f:
+            content = json.load(f)
+        data_element = convert(content, path=required_path)
+        self._data_elements[path_from_data_dir] = data_element
+        print("Loaded from file")
+        return data_element
