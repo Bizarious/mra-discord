@@ -1,4 +1,5 @@
 from nextcord.ext import commands
+from typing import Any
 from core.ext import ExtensionHandler
 from core.ext.mixins import ExtensionHandlerCogMixin
 
@@ -27,7 +28,6 @@ class Bot(commands.Bot):
         # the extension handler used to manage all extensions
         self._extension_handler = BotExtensionHandler(self, *extension_paths)
         self._extension_handler.load_extensions_from_paths()
-        self._extension_handler.load_extension("System")
 
         # the data manager
         self._data_provider = data.DataProvider(data_path)
@@ -37,3 +37,12 @@ class Bot(commands.Bot):
 
     async def on_ready(self):
         print("Ready")
+
+    def run(self, *args: Any, **kwargs: Any) -> None:
+        if self._running:
+            raise RuntimeError("Bot is already running")
+        self._running = True
+        commands.Bot.run(self, *args, **kwargs)
+
+    async def stop(self):
+        await self.close()
