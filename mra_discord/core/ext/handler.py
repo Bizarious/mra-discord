@@ -1,5 +1,10 @@
 from importlib.util import spec_from_file_location, module_from_spec
-from .errors import ExtensionClassNotFoundError
+from typing import Any
+from .errors import (ExtensionClassNotFoundError,
+                     ExtensionAlreadyLoadedError,
+                     ExtensionNotLoadedError,
+                     ExtensionCannotUnloadError
+                     )
 from .extension import ExtensionPackage
 
 import os
@@ -38,11 +43,13 @@ class ExtensionHandler:
         # collecting all types the handler can see
         self._accessible_types = []
 
-        # list of functions that are executed on extension loading
+        # list of functions that are executed on extension loading/unloading
         self._to_be_executed_on_extension_loading = []
+        self._to_be_executed_on_extension_unloading = []
 
-        # maps all extension classes to their names
-        self._extension_classes = {}
+        # maps all extension packages to their names
+        self._extension_packages = {}
+        self._to_auto_load = []
 
         # maps all loaded extension objects to their names
         self._extensions = {}
@@ -51,10 +58,14 @@ class ExtensionHandler:
     def extensions(self) -> dict:
         return self._extensions
 
-    def _add_extension_class(self, name: str, extension) -> None:
-        if name in self._extension_classes:
+    def _add_extension_class(self, name: str, extension_package: ExtensionPackage) -> None:
+        if name in self._extension_packages:
             raise RuntimeError(f'The extension "{name}" already exists')
-        self._extension_classes[name] = extension
+        self._extension_packages[name] = extension_package
+
+        # add all auto loading extensions to list
+        if extension_package.auto_load:
+            self._to_auto_load.append(extension_package)
 
     def _load_extension_from_file(self, name: str, path: str, tps: str) -> None:
         # loading module
@@ -66,34 +77,63 @@ class ExtensionHandler:
                                                                 tps
                                                                 )[tps]
         for extension_package in extension_packages:
-            self._add_extension_class(extension_package.cls.__name__, extension_package.cls)
+            self._add_extension_class(extension_package.name, extension_package)
 
-    def _load_extensions_from_paths_with_types(self, package_type: str) -> None:
+    def load_extensions_from_paths(self) -> None:
         """
-        Loads all extension classes that are found in the paths to the list with given package types.
-        Do not overwrite this function, overwrite load_extensions_from_path instead.
+        Loads all extension classes that are found in the paths to the list.
         """
         for path in self._paths:
             for file in os.listdir(path):
                 if not file.startswith("__") and file.endswith(".py"):
-                    self._load_extension_from_file(file[:-3], path + f"/{file}", package_type)
+                    self._load_extension_from_file(file[:-3], path + f"/{file}", "ExtensionPackage")
 
-    def load_extensions_from_paths(self) -> None:
-        """
-        Wrapper function for easier access. Can be overwritten.
-        """
-        self._load_extensions_from_paths_with_types("ExtensionPackage")
+        for extension in self._to_auto_load:
+            self.load_extension(extension.name)
+
+    def _execute_on_loading(self, attributes: dict, extension: Any) -> None:
+        for func in self._to_be_executed_on_extension_loading:
+            func(attributes, extension)
 
     def load_extension(self, name: str, *args, **kwargs) -> None:
-        if name not in self._extension_classes:
-            raise ExtensionClassNotFoundError(f'The extension class "{name}" does not exist')
+        """
+        Loads an extension from the dict.
+        """
+        if name not in self._extension_packages:
+            raise ExtensionClassNotFoundError(f'Cannot load "{name}": The extension class does not exist')
+        if name in self._extensions:
+            raise ExtensionAlreadyLoadedError(f'Cannot load "{name}": The extension has already been loaded')
 
-        extension_class = self._extension_classes[name]
-        extension = extension_class(self._interface, *args, **kwargs)
+        extension_package: ExtensionPackage = self._extension_packages[name]
+        extension = extension_package.cls(self._interface, *args, **kwargs)
         attributes = get_attributes(extension, *self._accessible_types)
         self._execute_on_loading(attributes, extension)
         self._extensions[name] = extension
 
-    def _execute_on_loading(self, attributes: dict, extension) -> None:
-        for func in self._to_be_executed_on_extension_loading:
-            func(attributes, extension)
+    def _execute_on_unloading(self, extension: Any):
+        for func in self._to_be_executed_on_extension_unloading:
+            func(extension)
+
+    def _unload_extension(self, name: str):
+        if name not in self._extensions:
+            raise ExtensionNotLoadedError(f'Cannot unload "{name}": The extension class has not been loaded')
+
+        extension = self._extensions.pop(name)
+
+        for func in self._to_be_executed_on_extension_unloading:
+            func(extension)
+
+    def unload_extension(self, name: str):
+        if name not in self._extensions:
+            raise ExtensionNotLoadedError(f'Cannot unload "{name}": The extension class has not been loaded')
+
+        extension_package: ExtensionPackage = self._extension_packages[name]
+
+        if not extension_package.can_unload:
+            raise ExtensionCannotUnloadError(f'Cannot unload "{name}": The extension cannot be unloaded')
+
+        self._unload_extension(name)
+
+    def unload_all_extensions(self):
+        for extension_name in self._extensions:
+            self._unload_extension(extension_name)
