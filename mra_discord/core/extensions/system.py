@@ -1,13 +1,22 @@
+from typing import TYPE_CHECKING
 from nextcord.ext import commands
 from mra_discord.core.ext import extension
+from core.permissions import owner
+
+if TYPE_CHECKING:
+    from core import Bot
 
 
 @extension(auto_load=True)
 class System(commands.Cog):
 
-    def __init__(self, bot):
+    def __init__(self, bot: "Bot"):
         self.bot = bot
 
     @commands.command()
-    async def test(self, ctx: commands.Context):
-        await ctx.send("Test")
+    @owner()
+    async def stop(self, _):
+        await self.bot.stop()
+
+    def cog_unload(self) -> None:
+        print("Unload")
