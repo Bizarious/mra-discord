@@ -18,5 +18,6 @@ class System(commands.Cog):
     async def stop(self, _):
         await self.bot.stop()
 
-    def cog_unload(self) -> None:
-        print("Unload")
+    @commands.command()
+    async def clear(self, ctx, n: int = 10):
+        await ctx.channel.purge(limit=n)
