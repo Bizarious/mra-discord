@@ -129,3 +129,8 @@ class ExtensionManager(commands.Cog, name=__MANAGER_NAME):
             return
         embed = self.generate_extension_list()
         await ctx.send(embed=embed, view=ExtensionManagementView(ctx, self, "unload"))
+
+    @commands.command("listext")
+    @owner()
+    async def list_extensions(self, ctx):
+        await ctx.send(embed=self.generate_extension_list())
