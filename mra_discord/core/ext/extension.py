@@ -22,19 +22,19 @@ class ExtensionPackage:
         self._can_unload = can_unload
 
     @property
-    def name(self):
+    def name(self) -> str:
         return self._name
 
     @property
-    def cls(self):
+    def cls(self) -> Any:
         return self._cls
 
     @property
-    def auto_load(self):
+    def auto_load(self) -> bool:
         return self._auto_load
 
     @property
-    def can_unload(self):
+    def can_unload(self) -> bool:
         return self._can_unload
 
 

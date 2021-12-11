@@ -32,7 +32,7 @@ class CustomHelpCommand(commands.MinimalHelpCommand):
 
         await self.get_destination().send(embed=embed)
 
-    async def send_command_help(self, command):
+    async def send_command_help(self, command: commands.Command):
         embed = Embed(title=self.get_command_signature(command))
         embed.description = command.help or "..."
         embed.set_author(name=self.context.bot.user.name, icon_url=self._get_bot_avatar().url)
@@ -55,7 +55,7 @@ class CustomHelpCommand(commands.MinimalHelpCommand):
         filtered = await self.filter_commands(cog.get_commands(), sort=True)
         for filtered_command in filtered:
             embed.add_field(name=self.get_command_signature(filtered_command),
-                            value=filtered_command.short_doc,
+                            value=filtered_command.short_doc or "...",
                             inline=False
                             )
 
@@ -68,6 +68,7 @@ class CustomHelpCommand(commands.MinimalHelpCommand):
 class HelpExtension(commands.Cog, name="Help"):
 
     def __init__(self, bot):
+        self.bot = bot
         self._original_help_command = bot.help_command
         bot.help_command = CustomHelpCommand()
         bot.help_command.cog = self

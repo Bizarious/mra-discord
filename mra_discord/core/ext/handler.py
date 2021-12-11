@@ -55,8 +55,15 @@ class ExtensionHandler:
         self._extensions = {}
 
     @property
-    def extensions(self) -> dict:
+    def loaded_extensions(self) -> dict:
         return self._extensions
+
+    @property
+    def extension_packages(self) -> dict:
+        return self._extension_packages
+
+    def can_unload(self, name: str) -> bool:
+        return self._extension_packages[name].can_unload
 
     def _add_extension_class(self, name: str, extension_package: ExtensionPackage) -> None:
         if name in self._extension_packages:

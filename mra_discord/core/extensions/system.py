@@ -1,7 +1,8 @@
-from typing import TYPE_CHECKING
 from nextcord.ext import commands
 from core.ext import extension
 from core.permissions import owner
+
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from core import Bot
