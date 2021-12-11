@@ -115,6 +115,9 @@ class ExtensionManager(commands.Cog, name=__MANAGER_NAME):
     @commands.command("load")
     @owner()
     async def load_extension(self, ctx):
+        """
+        Provides an interactive interface for loading extensions.
+        """
         if self.get_number_of_unloaded_extensions() == 0:
             await ctx.send("There are no extensions left that could be loaded.")
             return
@@ -124,6 +127,9 @@ class ExtensionManager(commands.Cog, name=__MANAGER_NAME):
     @commands.command("unload")
     @owner()
     async def unload_extension(self, ctx):
+        """
+        Provides an interactive interface for loading extensions.
+        """
         if self.get_number_of_loaded_extensions(True) == 0:
             await ctx.send("There are no extensions left that could be unloaded.")
             return
@@ -133,4 +139,7 @@ class ExtensionManager(commands.Cog, name=__MANAGER_NAME):
     @commands.command("listext")
     @owner()
     async def list_extensions(self, ctx):
+        """
+        Lists all available extensions sorted by loaded/unloaded.
+        """
         await ctx.send(embed=self.generate_extension_list())
