@@ -129,10 +129,3 @@ class ExtensionManager(commands.Cog, name=__MANAGER_NAME):
             return
         embed = self.generate_extension_list()
         await ctx.send(embed=embed, view=ExtensionManagementView(ctx, self, "unload"))
-
-
-@extension(name="Dummy")
-class Dummy:
-
-    def __init__(self, _):
-        print("Ja")
