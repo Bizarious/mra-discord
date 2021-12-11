@@ -1,10 +1,8 @@
 from nextcord import Message
+from nextcord.ext.commands import Cog
 from .base import ExtensionHandlerMixin
 
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from nextcord.ext.commands import Cog
+from typing import Any
 
 
 class ExtensionHandlerCogMixin(ExtensionHandlerMixin):
@@ -15,25 +13,28 @@ class ExtensionHandlerCogMixin(ExtensionHandlerMixin):
         # holds all limiter objects
         self._limiter = {}
 
-        def on_load(attributes: dict, cog: "Cog"):
-            self._interface.add_cog(cog)
+        def on_load(attributes: dict, extension: Any):
+            if isinstance(extension, Cog):
+                self._interface.add_cog(extension)
 
-            self._limiter[cog.qualified_name] = []
+            self._limiter[extension.given_name] = []
             for limiter in attributes["OnMessageLimiter"]:
-                self._limiter[cog.qualified_name].append(limiter)
+                self._limiter[extension.given_name].append(limiter)
 
-        def on_unload(cog: "Cog"):
-            self._interface.remove_cog(cog.qualified_name)
+        def on_unload(extension: Any):
+            if isinstance(extension, Cog):
+                self._interface.remove_cog(extension.qualified_name)
 
         self._to_be_executed_on_extension_loading.append(on_load)
         self._to_be_executed_on_extension_unloading.append(on_unload)
+
+        self._old_on_message = self._interface.on_message
 
         async def on_message(message: Message):
             for cog, limiter_list in self._limiter.items():
                 for limiter in limiter_list:
                     if not await limiter(cog, message):
                         return
-            await self._interface.process_commands(message)
+            await self._old_on_message(message)
 
-        self._old_on_message = self._interface.on_message
         self._interface.on_message = on_message

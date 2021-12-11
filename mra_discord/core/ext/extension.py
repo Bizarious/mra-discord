@@ -45,6 +45,19 @@ def extension(*,
               ):
 
     def dec(cls):
+        old_init = cls.__init__
+
+        def new__init__(self, *args, **kwargs):
+            old_init(self, *args, **kwargs)
+            self._given_name = name or self.__class__.__name__
+
+        @property
+        def given_name(self):
+            return self._given_name
+
+        cls.__init__ = new__init__
+        cls.given_name = given_name
+
         return ExtensionPackage(cls=cls,
                                 name=name,
                                 auto_load=auto_load,
