@@ -40,12 +40,16 @@ class Bot(commands.Bot):
         self._running = False
 
     @property
-    def data_provider(self):
+    def data_provider(self) -> DataProvider:
         return self._data_provider
 
     @property
-    def permissions(self):
+    def permissions(self) -> Permissions:
         return self._permissions
+
+    @property
+    def extension_handler(self) -> BotExtensionHandler:
+        return self._extension_handler
 
     async def on_ready(self):
         print("Ready")
