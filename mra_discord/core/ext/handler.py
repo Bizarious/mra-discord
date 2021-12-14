@@ -31,6 +31,30 @@ def get_attributes(obj: object, *types: str) -> dict:
     return attribute_mapping
 
 
+def load_extensions_from_file(name: str, path: str, tps: str) -> list:
+    # loading module
+    spec = spec_from_file_location(name, path)
+    module = module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    extension_packages: list = get_attributes(module, tps)[tps]
+
+    return extension_packages
+
+
+def load_extensions_from_paths(*paths: str, tps: str) -> list:
+    """
+    Loads all extension classes that are found in the paths to the list.
+    """
+    extension_packages = []
+    for path in paths:
+        for file in os.listdir(path):
+            if not file.startswith("__") and file.endswith(".py"):
+                extension_packages.extend(load_extensions_from_file(file[:-3], path + f"/{file}", tps))
+
+    return extension_packages
+
+
 class ExtensionHandler:
     """
     The class used to manage extensions.
@@ -72,31 +96,15 @@ class ExtensionHandler:
 
         # add all auto loading extensions to list
         if extension_package.auto_load:
-            self._to_auto_load.append(extension_package)
+            self._to_auto_load.append(extension_package.name)
 
-    def _load_extension_from_file(self, name: str, path: str, tps: str) -> None:
-        # loading module
-        spec = spec_from_file_location(name, path)
-        module = module_from_spec(spec)
-        spec.loader.exec_module(module)
-
-        extension_packages: [ExtensionPackage] = get_attributes(module,
-                                                                tps
-                                                                )[tps]
+    def load_extensions_from_paths(self) -> None:
+        extension_packages: [ExtensionPackage] = load_extensions_from_paths(*self._paths, tps="ExtensionPackage")
         for extension_package in extension_packages:
             self._add_extension_class(extension_package.name, extension_package)
 
-    def load_extensions_from_paths(self) -> None:
-        """
-        Loads all extension classes that are found in the paths to the list.
-        """
-        for path in self._paths:
-            for file in os.listdir(path):
-                if not file.startswith("__") and file.endswith(".py"):
-                    self._load_extension_from_file(file[:-3], path + f"/{file}", "ExtensionPackage")
-
-        for extension in self._to_auto_load:
-            self.load_extension(extension.name)
+        for name in self._to_auto_load:
+            self.load_extension(name)
 
     def _execute_on_loading(self, attributes: dict, extension: Any) -> None:
         for func in self._to_be_executed_on_extension_loading:
