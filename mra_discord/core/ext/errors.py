@@ -20,3 +20,7 @@ class ExtensionCannotUnloadError(ExtensionError):
 
 class OnMessageLimiterError(Exception):
     pass
+
+
+class IPCMessageHandlerError(Exception):
+    pass
