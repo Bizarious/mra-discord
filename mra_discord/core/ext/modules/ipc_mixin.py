@@ -1,4 +1,4 @@
-from .base import ExtensionHandlerMixin
+from .base import ExtensionHandlerModule
 from typing import Any, TYPE_CHECKING
 from core.ext.errors import IPCMessageHandlerError
 
@@ -6,7 +6,7 @@ if TYPE_CHECKING:
     from core.ext import IPCMessageHandler
 
 
-class ExtensionHandlerIPCMixin(ExtensionHandlerMixin):
+class ExtensionHandlerIPCMixin(ExtensionHandlerModule):
 
     def __init__(self):
         self._accessible_types.append("IPCMessageHandler")

@@ -3,16 +3,9 @@ from typing import Any
 from .data import DataProvider
 from .permissions import Permissions
 from core.ext import ExtensionHandler
-from core.ext.mixins import ExtensionHandlerCogMixin
+from core.ext.modules import ExtensionHandlerCogModule
 
 import nextcord
-
-
-class BotExtensionHandler(ExtensionHandler, ExtensionHandlerCogMixin):
-
-    def __init__(self, bot: "Bot", *paths):
-        ExtensionHandler.__init__(self, bot, *paths)
-        ExtensionHandlerCogMixin.__init__(self)
 
 
 class Bot(commands.Bot):
@@ -27,7 +20,8 @@ class Bot(commands.Bot):
         commands.Bot.__init__(self, command_prefix=command_prefix, intents=intents)
 
         # the extension handler used to manage all extensions
-        self._extension_handler = BotExtensionHandler(self, *extension_paths)
+        self._extension_handler = ExtensionHandler(self, *extension_paths)
+        self._extension_handler.add_module(ExtensionHandlerCogModule(self))
         self._extension_handler.load_extensions_from_paths()
 
         # the data manager
@@ -48,7 +42,7 @@ class Bot(commands.Bot):
         return self._permissions
 
     @property
-    def extension_handler(self) -> BotExtensionHandler:
+    def extension_handler(self) -> ExtensionHandler:
         return self._extension_handler
 
     async def on_ready(self):
