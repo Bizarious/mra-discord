@@ -2,9 +2,9 @@ class IPCError(Exception):
     pass
 
 
-class IPCQueueAlreadyExistsError(IPCError):
+class IPCQueueAlreadyExists(IPCError):
     pass
 
 
-class IPCQueueDoesNotExistError(IPCError):
+class IPCQueueDoesNotExist(IPCError):
     pass

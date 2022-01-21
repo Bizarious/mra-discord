@@ -11,3 +11,9 @@ class ExtensionHandlerModule:
 
     def get_accessible_types(self) -> list[str]:
         pass
+
+    def start(self):
+        pass
+
+    def stop(self):
+        pass

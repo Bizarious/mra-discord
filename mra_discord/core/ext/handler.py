@@ -1,5 +1,5 @@
 from importlib.util import spec_from_file_location, module_from_spec
-from typing import Any, TYPE_CHECKING, Type
+from typing import Any, TYPE_CHECKING
 from .errors import (ExtensionClassNotFoundError,
                      ExtensionAlreadyLoadedError,
                      ExtensionNotLoadedError,
@@ -158,3 +158,7 @@ class ExtensionHandler:
         extension_names = list(self._extensions.keys())[:]
         for extension_name in extension_names:
             self._unload_extension(extension_name)
+
+    def start_modules(self):
+        for module in self._modules:
+            module.start()

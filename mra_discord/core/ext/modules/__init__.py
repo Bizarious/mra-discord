@@ -1,2 +1,3 @@
 from .base import *
-from .cog_module import *
+from .cog import *
+from .ipc import *
