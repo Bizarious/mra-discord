@@ -1,9 +1,11 @@
-from typing import Optional
+from typing import Optional, Union, Type
+from .time_calculator import choose_calculator
+from datetime import datetime
 
 
 class TaskPackage:
 
-    def __init__(self, name: str, task_class: "Task"):
+    def __init__(self, name: str, task_class: Type["Task"]):
         self._name = name
         self._task_class = task_class
 
@@ -36,12 +38,12 @@ class TimeBasedTask(Task):
         Task.__init__(self)
 
         self._date_string = date_string
-        self._next_time = None
+        self._calculator = choose_calculator(date_string)
 
     @property
     def date_string(self):
         return self._date_string
 
     @property
-    def next_time(self):
-        return self._next_time
+    def next_time(self) -> Union[datetime, None]:
+        return self._calculator.calculate_next_date(self._date_string, datetime.now())
