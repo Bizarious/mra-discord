@@ -134,6 +134,8 @@ config/
 experiments/
 custom_extensions/
 
+/mra_discord/test.py
+
 .idea
 
 __token__.py
