@@ -63,9 +63,12 @@ class ExtensionHandler:
     The class used to manage extensions.
     """
 
-    def __init__(self, interface, *paths: str):
+    def __init__(self, interface, identifier: str, *paths: str):
         self._paths = paths
         self._interface = interface
+
+        # which extension should be added
+        self._identifier = identifier
 
         # collects all modules
         self._modules = []
@@ -98,6 +101,9 @@ class ExtensionHandler:
     def _add_extension_class(self, name: str, extension_package: ExtensionPackage) -> None:
         if name in self._extension_packages:
             raise RuntimeError(f'The extension "{name}" already exists')
+
+        if extension_package.target is not None and extension_package.target != self._identifier:
+            return
         self._extension_packages[name] = extension_package
 
         # add all auto-loading extensions to list

@@ -7,8 +7,9 @@ class ExtensionPackage:
     def __init__(self, *,
                  cls: Any,
                  name: str,
-                 auto_load=False,
-                 can_unload=True
+                 target: Optional[str],
+                 auto_load: Optional[bool] = False,
+                 can_unload: Optional[bool] = True
                  ):
 
         self._cls = cls
@@ -20,6 +21,7 @@ class ExtensionPackage:
 
         self._auto_load = auto_load
         self._can_unload = can_unload
+        self._target = target
 
     @property
     def name(self) -> str:
@@ -37,11 +39,16 @@ class ExtensionPackage:
     def can_unload(self) -> bool:
         return self._can_unload
 
+    @property
+    def target(self):
+        return self._target
+
 
 def extension(*,
               name: Optional[str] = None,
               auto_load: Optional[bool] = False,
-              can_unload: Optional[bool] = True
+              can_unload: Optional[bool] = True,
+              target: Optional[str] = None
               ):
 
     def dec(cls):
@@ -61,7 +68,8 @@ def extension(*,
         return ExtensionPackage(cls=cls,
                                 name=name,
                                 auto_load=auto_load,
-                                can_unload=can_unload
+                                can_unload=can_unload,
+                                target=target
                                 )
     return dec
 
@@ -86,7 +94,7 @@ def limit_on_message(func: Callable):
 
 class IPCMessageHandler:
     """
-    Class to handle ipc commands
+    Class to handle ipc commands.
     """
     def __init__(self, func: Callable, *ipc_commands: str):
         self._func = func
