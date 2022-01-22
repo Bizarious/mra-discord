@@ -1,12 +1,9 @@
-from typing import TYPE_CHECKING
 from nextcord.ext import commands
+from core import Bot, BOT_IDENTIFIER
 from core.ext import extension
 
-if TYPE_CHECKING:
-    from core import Bot
 
-
-@extension(auto_load=True)
+@extension(auto_load=True, target=BOT_IDENTIFIER)
 class BaseErrorHandler(commands.Cog):
 
     def __init__(self, bot: "Bot"):

@@ -1,13 +1,10 @@
 from nextcord.ext import commands
+from core import Bot, BOT_IDENTIFIER
 from core.ext import extension
 from core.permissions import owner
 
 import nextcord
 
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from core import Bot
 
 __MANAGER_NAME = "Extension Manager"
 
@@ -67,7 +64,7 @@ class ExtensionManagementView(nextcord.ui.View):
                                                 )
 
 
-@extension(name=__MANAGER_NAME, auto_load=True, can_unload=False)
+@extension(name=__MANAGER_NAME, auto_load=True, can_unload=False, target=BOT_IDENTIFIER)
 class ExtensionManager(commands.Cog, name=__MANAGER_NAME):
     """
     Used to manage installed extensions

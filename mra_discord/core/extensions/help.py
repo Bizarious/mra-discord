@@ -1,5 +1,6 @@
 from nextcord import Embed
 from nextcord.ext import commands
+from core import Bot, BOT_IDENTIFIER
 from core.ext import extension
 
 
@@ -64,7 +65,7 @@ class CustomHelpCommand(commands.MinimalHelpCommand):
     send_group_help = send_command_help
 
 
-@extension(name="Help", auto_load=True)
+@extension(name="Help", auto_load=True, target=BOT_IDENTIFIER)
 class HelpExtension(commands.Cog, name="Help"):
 
     def __init__(self, bot):

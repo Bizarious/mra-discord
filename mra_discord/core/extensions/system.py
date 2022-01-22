@@ -1,14 +1,10 @@
 from nextcord.ext import commands
+from core import Bot, BOT_IDENTIFIER
 from core.ext import extension
 from core.permissions import owner
 
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from core import Bot
-
-
-@extension(auto_load=True)
+@extension(auto_load=True, target=BOT_IDENTIFIER)
 class System(commands.Cog):
     """
     Provides commands for controlling the bot on the system level
