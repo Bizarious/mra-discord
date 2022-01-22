@@ -8,7 +8,7 @@ from core.ext.modules import ExtensionHandlerCogModule
 
 import nextcord
 
-BOT_IPC_IDENTIFIER = "bot"
+BOT_IDENTIFIER = "bot"
 
 
 class Bot(commands.Bot):
@@ -24,7 +24,7 @@ class Bot(commands.Bot):
 
         self._ipc_handler = IPC()
 
-        self._extension_handler = ExtensionHandler(self, *extension_paths)
+        self._extension_handler = ExtensionHandler(self, BOT_IDENTIFIER, *extension_paths)
         self._extension_handler.add_module(ExtensionHandlerCogModule(self))
         self._extension_handler.load_extensions_from_paths()
 

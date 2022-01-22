@@ -7,14 +7,14 @@ from core.ipc import IPC
 from core.ext import load_extensions_from_paths, ExtensionHandler
 from core.ext.modules import ExtensionHandlerIPCModule
 
-TASK_HANDLER_IPC_IDENTIFIER = "task"
+TASK_HANDLER_IDENTIFIER = "task"
 
 
 class TaskHandler(Process):
 
     def __init__(self, ipc_handler: IPC, *paths: str):
         Process.__init__(self)
-        ipc_handler.add_queue(TASK_HANDLER_IPC_IDENTIFIER)
+        ipc_handler.add_queue(TASK_HANDLER_IDENTIFIER)
 
         # the paths, where it should look for tasks
         self._paths = paths
@@ -24,7 +24,7 @@ class TaskHandler(Process):
 
         self._task_scheduler = TaskScheduler()
         self._extension_handler = ExtensionHandler(self)
-        self._extension_handler.add_module(ExtensionHandlerIPCModule(ipc_handler, TASK_HANDLER_IPC_IDENTIFIER))
+        self._extension_handler.add_module(ExtensionHandlerIPCModule(ipc_handler, TASK_HANDLER_IDENTIFIER))
 
     def register_all_tasks(self):
         task_packages: list[TaskPackage] = load_extensions_from_paths(*self._paths, tps="TaskPackage")
