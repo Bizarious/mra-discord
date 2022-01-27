@@ -51,7 +51,7 @@ class Bot(commands.Bot):
         return self._ipc_handler
 
     async def on_ready(self):
-        print("Ready")
+        print("\n###### Ready ######\n")
 
     def run(self, *args: Any, **kwargs: Any) -> None:
         if self._running:
