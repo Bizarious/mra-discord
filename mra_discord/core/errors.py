@@ -8,3 +8,7 @@ class IPCQueueAlreadyExists(IPCError):
 
 class IPCQueueDoesNotExist(IPCError):
     pass
+
+
+class ConnectionTerminated(IPCError):
+    pass

@@ -12,19 +12,19 @@ TASK_HANDLER_IDENTIFIER = "task"
 
 class TaskHandler(Process):
 
-    def __init__(self, ipc_handler: IPC, *paths: str):
+    def __init__(self, ipc_handler: IPC, task_paths: [str], extension_paths: [str]):
         Process.__init__(self)
-        ipc_handler.add_queue(TASK_HANDLER_IDENTIFIER)
 
         # the paths, where it should look for tasks
-        self._paths = paths
+        self._paths = task_paths
 
         # maps all task classes to their names
         self._task_classes = {}
 
         self._task_scheduler = TaskScheduler()
-        self._extension_handler = ExtensionHandler(self)
+        self._extension_handler = ExtensionHandler(self, TASK_HANDLER_IDENTIFIER, *extension_paths)
         self._extension_handler.add_module(ExtensionHandlerIPCModule(ipc_handler, TASK_HANDLER_IDENTIFIER))
+        self._extension_handler.load_extensions_from_paths()
 
     def register_all_tasks(self):
         task_packages: list[TaskPackage] = load_extensions_from_paths(*self._paths, tps="TaskPackage")
