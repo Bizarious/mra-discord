@@ -2,7 +2,7 @@ from typing import Optional, Any, Callable
 from .errors import OnMessageLimiterError
 
 
-class ExtensionPackage:
+class Extension:
 
     def __init__(self, *,
                  cls: Any,
@@ -23,6 +23,9 @@ class ExtensionPackage:
         self._can_unload = can_unload
         self._target = target
 
+        # represents the loaded extension
+        self._extension = None
+
     @property
     def name(self) -> str:
         return self._name
@@ -40,8 +43,26 @@ class ExtensionPackage:
         return self._can_unload
 
     @property
-    def target(self):
+    def target(self) -> str:
         return self._target
+
+    @property
+    def loaded(self) -> bool:
+        return self._extension is not None
+
+    @property
+    def extension(self):
+        return self._extension
+
+    def load(self, interface, *args, **kwargs):
+        self._extension = self._cls(interface, *args, **kwargs)
+        if hasattr(self._extension, "on_load"):
+            self._extension.on_load()
+
+    def unload(self):
+        if hasattr(self._extension, "on_unload"):
+            self._extension.on_unload()
+        self._extension = None
 
 
 def extension(*,
@@ -65,12 +86,12 @@ def extension(*,
         cls.__init__ = new__init__
         cls.given_name = given_name
 
-        return ExtensionPackage(cls=cls,
-                                name=name,
-                                auto_load=auto_load,
-                                can_unload=can_unload,
-                                target=target
-                                )
+        return Extension(cls=cls,
+                         name=name,
+                         auto_load=auto_load,
+                         can_unload=can_unload,
+                         target=target
+                         )
     return dec
 
 

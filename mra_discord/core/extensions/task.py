@@ -6,7 +6,7 @@ from core.permissions import owner
 from core.task import TaskHandler, TASK_HANDLER_IDENTIFIER
 
 
-@extension(auto_load=True, name="Task Handler", target=BOT_IDENTIFIER)
+@extension(auto_load=False, name="Task Handler", target=BOT_IDENTIFIER)
 class TaskManager(commands.Cog):
     """
     Provides commands for managing tasks.

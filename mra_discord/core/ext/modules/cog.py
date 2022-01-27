@@ -1,41 +1,35 @@
 from nextcord import Message
 from nextcord.ext.commands import Cog
-from .base import ExtensionHandlerModule
-
-from typing import Any
+from core.ext import Extension
+from core.ext.modules import ExtensionHandlerModule
 
 
 class ExtensionHandlerCogModule(ExtensionHandlerModule):
 
     def __init__(self, bot):
-        self._bot = bot
+        super().__init__()
 
-        # holds all limiter objects
-        self._limiter = {}
+        self._bot = bot
 
         # old on_message method from bot
         self._old_on_message = self._bot.on_message
 
         async def on_message(message: Message):
-            for cog, limiter_list in self._limiter.items():
-                for limiter in limiter_list:
+            for cog, limiters in self._handlers.items():
+                for limiter in limiters:
                     if not await limiter(cog, message):
                         return
             await self._old_on_message(message)
 
         self._bot.on_message = on_message
 
-    def on_load(self, attributes: dict, extension: Any):
-        if isinstance(extension, Cog):
-            self._bot.add_cog(extension)
+    def on_load_custom(self, extension: Extension):
+        if isinstance(extension.extension, Cog):
+            self._bot.add_cog(extension.extension)
 
-        self._limiter[extension.given_name] = []
-        for limiter in attributes["OnMessageLimiter"]:
-            self._limiter[extension.given_name].append(limiter)
-
-    def on_unload(self, extension: Any):
-        if isinstance(extension, Cog):
-            self._bot.remove_cog(extension.qualified_name)
+    def on_unload_custom(self, extension: Extension):
+        if isinstance(extension.extension, Cog):
+            self._bot.remove_cog(extension.extension.qualified_name)
 
     def get_accessible_types(self) -> list[str]:
         return ["OnMessageLimiter"]
