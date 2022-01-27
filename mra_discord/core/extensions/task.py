@@ -1,7 +1,8 @@
 from nextcord.ext import commands
 from core import Bot, BOT_IDENTIFIER
 from core.ipc import IPCPackage
-from core.ext import extension, on_ipc_message
+from core.ext import extension
+from core.ext.decorators import on_ipc_message
 from core.permissions import owner
 from core.task import TaskHandler, TASK_HANDLER_IDENTIFIER
 

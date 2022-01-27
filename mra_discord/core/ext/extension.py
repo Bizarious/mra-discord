@@ -1,5 +1,4 @@
-from typing import Optional, Any, Callable
-from .errors import OnMessageLimiterError
+from typing import Optional, Any
 
 
 class Extension:
@@ -93,43 +92,3 @@ def extension(*,
                          target=target
                          )
     return dec
-
-
-class OnMessageLimiter:
-    """
-    Class to restrict command execution in the on_message method.
-    """
-    def __init__(self, func: Callable):
-        self._func = func
-
-    async def __call__(self, *args, **kwargs) -> bool:
-        result = await self._func(*args, **kwargs)
-        if not isinstance(result, bool):
-            raise OnMessageLimiterError(f"The function must return bool")
-        return result
-
-
-def limit_on_message(func: Callable):
-    return OnMessageLimiter(func)
-
-
-class IPCMessageHandler:
-    """
-    Class to handle ipc commands.
-    """
-    def __init__(self, func: Callable, *ipc_commands: str):
-        self._func = func
-        self._ipc_commands = ipc_commands
-
-    def __call__(self, *args, **kwargs):
-        return self._func(*args, **kwargs)
-
-    @property
-    def ipc_commands(self):
-        return self._ipc_commands
-
-
-def on_ipc_message(*ipc_commands: str):
-    def decorator(func: Callable):
-        return IPCMessageHandler(func, *ipc_commands)
-    return decorator
