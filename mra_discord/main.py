@@ -1,9 +1,12 @@
+import logging
 from core import Bot
 from __token__ import __token__
 
 import nextcord
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+
     intents = nextcord.Intents.default()
     # noinspection PyDunderSlots,PyUnresolvedReferences
     intents.presences = True
