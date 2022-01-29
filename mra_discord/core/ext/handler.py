@@ -88,7 +88,7 @@ class ExtensionHandler:
         return self._loaded_extensions
 
     @property
-    def extension_packages(self) -> dict:
+    def extensions(self) -> dict:
         return self._extensions
 
     def add_module(self, module: "ExtensionHandlerModule"):
@@ -151,6 +151,7 @@ class ExtensionHandler:
         extension = self._loaded_extensions.pop(name)
 
         self._execute_on_unloading(extension)
+        extension.unload()
 
     def unload_extension(self, name: str):
         if name not in self._loaded_extensions:
