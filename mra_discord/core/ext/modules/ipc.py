@@ -1,37 +1,41 @@
 import logging
-from .base import ExtensionHandlerModule
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING
 from threading import Thread
-from core.ipc import IPC, IPCPackage, IPCConnection
+
+from core.ext import Extension
+from core.ext.modules import ExtensionHandlerModule
 from core.ext.errors import IPCMessageHandlerError
+from core.ipc import IPC, IPCPackage, IPCConnection
 
 if TYPE_CHECKING:
-    from core.ext import IPCMessageHandler
+    from core.ext.decorators import IPCMessageHandler
 
 
 class ExtensionHandlerIPCModule(ExtensionHandlerModule):
 
     def __init__(self, ipc_handler: IPC, ipc_identifier: str):
+        super().__init__()
         self._ipc_handler = ipc_handler
         self._ipc_handler.add_queue(ipc_identifier)
         self._ipc_identifier = ipc_identifier
 
-        # maps all ipc handlers to their commands
+        # maps all commands to their ipc_handlers
         self._ipc_handlers = {}
-        self._ipc_handler_extensions = {}
 
-    def on_load(self, attributes: dict, extension: Any):
-        handlers: list[IPCMessageHandler] = attributes["IPCMessageHandler"]
-        self._ipc_handler_extensions[extension.given_name] = []
-        for handler in handlers:
-            self._ipc_handler_extensions[extension.given_name].append(handler)
-            for ipc_command in handler.ipc_commands:
-
+    def _on_load(self, extension: Extension):
+        ipc_handler: IPCMessageHandler
+        for ipc_handler in self._handlers[extension.name]:
+            for ipc_command in ipc_handler.ipc_commands:
                 if ipc_command in self._ipc_handlers:
                     raise IPCMessageHandlerError(f'There is already a function registered for the '
                                                  f'command "{ipc_command}"')
+                self._ipc_handlers[ipc_command] = {"handler": ipc_handler, "extension": extension}
 
-                self._ipc_handlers[ipc_command] = {"handler": handler, "extension": extension}
+    def _on_unload(self, extension: Extension):
+        ipc_handlers: IPCMessageHandler
+        for ipc_handler in self._handlers[extension.name]:
+            for ipc_command in ipc_handler.ipc_commands:
+                self._ipc_handlers.pop(ipc_command)
 
     def get_accessible_types(self) -> list[str]:
         return ["IPCMessageHandler"]

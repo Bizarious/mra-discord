@@ -23,11 +23,11 @@ class ExtensionHandlerCogModule(ExtensionHandlerModule):
 
         self._bot.on_message = on_message
 
-    def on_load_custom(self, extension: Extension):
+    def _on_load(self, extension: Extension):
         if isinstance(extension.extension, Cog):
             self._bot.add_cog(extension.extension)
 
-    def on_unload_custom(self, extension: Extension):
+    def _on_unload(self, extension: Extension):
         if isinstance(extension.extension, Cog):
             self._bot.remove_cog(extension.extension.qualified_name)
 
