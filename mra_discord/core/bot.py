@@ -1,10 +1,14 @@
+import os
+import sys
+
 from nextcord.ext import commands
 from typing import Any
-from .data import DataProvider
-from .permissions import Permissions
-from .ipc import IPC
+
+from core.data import DataProvider
+from core.permissions import Permissions
+from core.ipc import IPC
 from core.ext import ExtensionHandler
-from core.ext.modules import ExtensionHandlerCogModule
+from core.ext.modules import ExtensionHandlerCogModule, ExtensionHandlerIPCModule
 
 import nextcord
 
@@ -26,6 +30,7 @@ class Bot(commands.Bot):
 
         self._extension_handler = ExtensionHandler(self, BOT_IDENTIFIER, *extension_paths)
         self._extension_handler.add_module(ExtensionHandlerCogModule(self))
+        self._extension_handler.add_module(ExtensionHandlerIPCModule(self._ipc_handler, BOT_IDENTIFIER))
         self._extension_handler.load_extensions_from_paths()
 
         self._data_provider = DataProvider(data_path)
@@ -33,6 +38,7 @@ class Bot(commands.Bot):
 
         # flags
         self._running = False
+        self._restart = False
 
     @property
     def data_provider(self) -> DataProvider:
@@ -58,10 +64,17 @@ class Bot(commands.Bot):
             raise RuntimeError("Bot is already running")
         self._running = True
         commands.Bot.run(self, *args, **kwargs)
+        if self._restart:
+            os.execv(sys.executable, [sys.executable.split("/")[-1], "-u"] + sys.argv)
 
     async def stop(self):
         self._extension_handler.unload_all_extensions()
         await self.close()
+
+    async def restart(self):
+        print("R")
+        self._restart = True
+        await self.stop()
 
     async def register_bulk_application_commands(self) -> None:
         # seems to be abstract in base class

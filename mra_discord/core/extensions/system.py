@@ -17,9 +17,17 @@ class System(commands.Cog):
     @owner()
     async def stop(self, _):
         """
-        Stops the bot
+        Stops the bot.
         """
         await self.bot.stop()
+
+    @commands.command()
+    @owner()
+    async def restart(self, _):
+        """
+        Restarts the bot.
+        """
+        await self.bot.restart()
 
     @commands.command()
     async def clear(self, ctx, n: int = 10):
