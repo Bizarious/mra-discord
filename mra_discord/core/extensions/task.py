@@ -28,7 +28,7 @@ class TaskManager(commands.Cog):
 
     @commands.command()
     @owner()
-    async def test(self, ctx):
+    async def test(self, _):
         connection = ipc.establish_connection("task", BOT_IDENTIFIER)
 
         package = ipc.IPCPackage()

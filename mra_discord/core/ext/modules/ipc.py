@@ -47,10 +47,11 @@ class IPCPackage:
 
 class IPCConnection:
 
-    def __init__(self, pipe: Connection, side: str):
+    def __init__(self, pipe: Connection, own_side: str, other_side: str):
         self._pipe = pipe
-        self._side = side
-        self._logger = logging.getLogger(side)
+        self._own_side = own_side
+        self._other_side = other_side
+        self._logger = logging.getLogger(own_side)
 
     def _connection_is_closed(self) -> bool:
         return self._pipe.closed
@@ -71,17 +72,22 @@ class IPCConnection:
                 package.label(k, v)
 
             self._pipe.send(package)
-        except (EOFError, ConnectionError):
+        except (EOFError, ConnectionError) as e:
+            self._logger.debug(f"Received {e.__class__.__name__} while trying to send a package: "
+                               f"{self._other_side} has closed its connection")
             return
 
     def recv(self, timeout: float = 5) -> Optional[IPCPackage]:
         if not self._pipe.poll(timeout):
+            self._logger.debug("Reached timeout, terminating connection")
             self.end_communication()
             return None
 
         try:
             package: IPCPackage = self._pipe.recv()
-        except (EOFError, ConnectionError):
+        except (EOFError, ConnectionError) as e:
+            self._logger.debug(f"Received {e.__class__.__name__} while trying to receive a package: "
+                               f"{self._other_side} has closed its connection")
             return None
 
         return package
@@ -125,11 +131,11 @@ def establish_connection(target: str, source: str) -> IPCConnection:
     connection1, connection2 = Pipe()
     package = IPCPackage()
     package.label(_FIELD_IPC_COMMAND, _COMMAND_ESTABLISH)
-    package.pack(_FIELD_IPC_CONNECTION, IPCConnection(connection2, target))
+    package.pack(_FIELD_IPC_CONNECTION, IPCConnection(connection2, target, source))
 
     _queues[target].put(package)
 
-    connection = IPCConnection(connection1, source)
+    connection = IPCConnection(connection1, source, target)
     ready_package = connection.recv()
 
     if ready_package.labels[_FIELD_IPC_STATUS] != _STATUS_READY:
@@ -150,6 +156,8 @@ class ExtensionHandlerIPCModule(ExtensionHandlerModule):
 
         self._worker = Thread(target=self._run)
 
+        self._logger = logging.getLogger(ipc_identifier)
+
     def _on_load(self, extension: Extension):
         ipc_handler: IPCMessageHandler
         for ipc_handler in self._handlers[extension.name]:
@@ -169,7 +177,7 @@ class ExtensionHandlerIPCModule(ExtensionHandlerModule):
         return ["IPCMessageHandler"]
 
     def _handle_connection(self, package: IPCPackage):
-        # logging.info("Established connection")
+        self._logger.debug("Established connection")
 
         connection: IPCConnection = package.content[_FIELD_IPC_CONNECTION]
         connection.send(status=_STATUS_READY)
@@ -178,7 +186,7 @@ class ExtensionHandlerIPCModule(ExtensionHandlerModule):
             connection_package: IPCPackage = connection.recv(60)
 
             if connection_package is None:
-                # logging.info("Terminated connection")
+                self._logger.debug("Terminated connection")
                 return
 
             command = connection_package.labels[_FIELD_IPC_COMMAND]

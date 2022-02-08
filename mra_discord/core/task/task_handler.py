@@ -1,3 +1,4 @@
+import logging
 import signal
 
 from multiprocessing import Process
@@ -11,6 +12,8 @@ from core.ext import load_extensions_from_paths, ExtensionHandler
 from core.ext.modules import ExtensionHandlerIPCModule
 
 TASK_HANDLER_IDENTIFIER = "task"
+
+_logger = logging.getLogger(TASK_HANDLER_IDENTIFIER)
 
 
 class TaskHandler(Process):
@@ -59,6 +62,7 @@ class TaskHandler(Process):
 
     def run(self) -> None:
         self._extension_handler.start_modules()
+        _logger.info("Started successfully")
 
         while True:
             self._time_scheduler.schedule()
@@ -71,6 +75,7 @@ class TaskHandler(Process):
                 break
 
         self.cleanup()
+        _logger.info("Stopped successfully")
 
     def _create_unique_task_id(self) -> str:
         length = 3
@@ -97,4 +102,3 @@ class TaskHandler(Process):
         task.set_next_time()
         self._tasks[self._create_unique_task_id()] = task
         self.add_task_to_queue(task)
-        print(self._tasks)
