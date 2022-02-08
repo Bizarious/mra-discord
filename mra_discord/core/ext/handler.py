@@ -1,10 +1,5 @@
 from importlib.util import spec_from_file_location, module_from_spec
 from typing import Any, TYPE_CHECKING
-from .errors import (ExtensionClassNotFoundError,
-                     ExtensionAlreadyLoadedError,
-                     ExtensionNotLoadedError,
-                     ExtensionCannotUnloadError
-                     )
 from .extension import Extension
 
 if TYPE_CHECKING:
@@ -131,9 +126,9 @@ class ExtensionHandler:
         Loads an extension from the dict.
         """
         if name not in self._extensions:
-            raise ExtensionClassNotFoundError(f'Cannot load "{name}": The extension class does not exist')
+            raise KeyError(f'Cannot load "{name}": The extension class does not exist')
         if name in self._loaded_extensions:
-            raise ExtensionAlreadyLoadedError(f'Cannot load "{name}": The extension has already been loaded')
+            raise KeyError(f'Cannot load "{name}": The extension has already been loaded')
 
         extension: Extension = self._extensions[name]
         extension.load(self._interface, *args, **kwargs)
@@ -146,7 +141,7 @@ class ExtensionHandler:
 
     def _unload_extension(self, name: str):
         if name not in self._loaded_extensions:
-            raise ExtensionNotLoadedError(f'Cannot unload "{name}": The extension class has not been loaded')
+            raise KeyError(f'Cannot unload "{name}": The extension class has not been loaded')
 
         extension = self._loaded_extensions.pop(name)
 
@@ -155,12 +150,12 @@ class ExtensionHandler:
 
     def unload_extension(self, name: str):
         if name not in self._loaded_extensions:
-            raise ExtensionNotLoadedError(f'Cannot unload "{name}": The extension class has not been loaded')
+            raise KeyError(f'Cannot unload "{name}": The extension class has not been loaded')
 
         extension: Extension = self._extensions[name]
 
         if not extension.can_unload:
-            raise ExtensionCannotUnloadError(f'Cannot unload "{name}": The extension cannot be unloaded')
+            raise KeyError(f'Cannot unload "{name}": The extension cannot be unloaded')
 
         self._unload_extension(name)
 
@@ -172,3 +167,7 @@ class ExtensionHandler:
     def start_modules(self):
         for module in self._modules:
             module.start()
+
+    def stop_modules(self):
+        for module in self._modules:
+            module.stop()

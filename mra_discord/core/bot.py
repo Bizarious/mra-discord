@@ -10,7 +10,6 @@ from nextcord.ext import commands
 
 from core.data import DataProvider
 from core.permissions import Permissions
-from core.ipc import IPC
 from core.ext import ExtensionHandler
 from core.ext.modules import ExtensionHandlerCogModule, ExtensionHandlerIPCModule
 
@@ -30,11 +29,9 @@ class Bot(commands.Bot):
 
         commands.Bot.__init__(self, command_prefix=command_prefix, intents=intents)
 
-        self._ipc_handler = IPC()
-
         self._extension_handler = ExtensionHandler(self, BOT_IDENTIFIER, *extension_paths)
         self._extension_handler.add_module(ExtensionHandlerCogModule(self))
-        self._extension_handler.add_module(ExtensionHandlerIPCModule(self._ipc_handler, BOT_IDENTIFIER))
+        self._extension_handler.add_module(ExtensionHandlerIPCModule(BOT_IDENTIFIER))
         self._extension_handler.load_extensions_from_paths()
 
         self._data_provider = DataProvider(data_path)
@@ -56,15 +53,13 @@ class Bot(commands.Bot):
     def extension_handler(self) -> ExtensionHandler:
         return self._extension_handler
 
-    @property
-    def ipc_handler(self) -> IPC:
-        return self._ipc_handler
-
     @staticmethod
     async def on_ready():
         _logger.info("Logged in and ready")
 
     def run(self, *args: Any, **kwargs: Any) -> None:
+        self._extension_handler.start_modules()
+
         if self._running:
             raise RuntimeError("Bot is already running")
         self._running = True
@@ -79,10 +74,10 @@ class Bot(commands.Bot):
             _logger.info("Shutting down")
 
     def _clean_up(self):
+        self._extension_handler.stop_modules()
         self._extension_handler.unload_all_extensions()
 
     async def stop(self):
-        self._extension_handler.unload_all_extensions()
         await self.close()
 
     async def restart(self):

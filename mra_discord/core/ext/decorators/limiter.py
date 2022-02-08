@@ -1,5 +1,4 @@
 from typing import Callable
-from core.ext import OnMessageLimiterError
 
 
 class OnMessageLimiter:
@@ -12,7 +11,7 @@ class OnMessageLimiter:
     async def __call__(self, *args, **kwargs) -> bool:
         result = await self._func(*args, **kwargs)
         if not isinstance(result, bool):
-            raise OnMessageLimiterError(f"The function must return bool")
+            raise ValueError(f"The function must return bool")
         return result
 
 
