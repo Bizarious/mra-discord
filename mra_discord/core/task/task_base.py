@@ -1,11 +1,17 @@
-from typing import Optional, Union, Type
-from .time_calculator import choose_calculator
 from datetime import datetime
+from typing import Optional, Type, Any
+
+from core.task.time_calculator import choose_calculator
+
+
+FIELD_DATE_STRING = "date_string"
+FIELD_NEXT_TIME = "next_time"
+FIELD_OWNER = "owner"
 
 
 class TaskPackage:
 
-    def __init__(self, name: str, task_class: Type["Task"]):
+    def __init__(self, name: str, task_class: Type["TimeBasedTask"]):
         self._name = name
         self._task_class = task_class
 
@@ -26,24 +32,49 @@ def task(name: Optional[str] = None):
     return dec
 
 
-class Task:
+class TaskFields:
 
-    def __init__(self):
-        pass
+    def __init__(self, raw_dict: dict):
+        self._raw_dict = raw_dict
+
+    @property
+    def raw_dict(self):
+        return self._raw_dict
+
+    def get(self, key: str, default: Any = None, required: bool = False):
+        if required:
+            if key not in self._raw_dict.keys():
+                raise KeyError(f"The field '{key}' is required")
+        return self._raw_dict.get(key, default)
 
 
-class TimeBasedTask(Task):
+class TimeBasedTask:
 
-    def __init__(self, *, date_string):
-        Task.__init__(self)
+    def __init__(self, fields: TaskFields):
+        self._date_string = fields.get(FIELD_DATE_STRING, required=True)
+        self._owner = fields.get(FIELD_OWNER, required=True)
+        self._next_time = fields.get(FIELD_NEXT_TIME)
 
-        self._date_string = date_string
-        self._calculator = choose_calculator(date_string)
+        self._calculator = choose_calculator(self._date_string)()
 
     @property
     def date_string(self):
         return self._date_string
 
     @property
-    def next_time(self) -> Union[datetime, None]:
-        return self._calculator.calculate_next_date(self._date_string, datetime.now())
+    def next_time(self) -> Optional[datetime]:
+        return self._next_time
+
+    def set_next_time(self, time: Optional[datetime] = None):
+        if time is None:
+            if self._next_time is None:
+                time = datetime.now()
+            else:
+                time = self._next_time
+        self._next_time = self._calculator.calculate_next_date_with_context(self._date_string, time)
+
+    def run(self):
+        pass
+
+    def execute(self):
+        self.run()
