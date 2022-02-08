@@ -1,8 +1,12 @@
 import os
 import sys
+import logging
+
+from typing import Any
+
+import nextcord
 
 from nextcord.ext import commands
-from typing import Any
 
 from core.data import DataProvider
 from core.permissions import Permissions
@@ -10,9 +14,9 @@ from core.ipc import IPC
 from core.ext import ExtensionHandler
 from core.ext.modules import ExtensionHandlerCogModule, ExtensionHandlerIPCModule
 
-import nextcord
-
 BOT_IDENTIFIER = "bot"
+
+_logger = logging.getLogger(BOT_IDENTIFIER)
 
 
 class Bot(commands.Bot):
@@ -21,7 +25,7 @@ class Bot(commands.Bot):
                  command_prefix: str = ".",
                  extension_paths: list[str],
                  data_path: str,
-                 intents: nextcord.Intents = nextcord.Intents.default()
+                 intents: nextcord.Intents = nextcord.Intents.all()
                  ):
 
         commands.Bot.__init__(self, command_prefix=command_prefix, intents=intents)
@@ -56,23 +60,32 @@ class Bot(commands.Bot):
     def ipc_handler(self) -> IPC:
         return self._ipc_handler
 
-    async def on_ready(self):
-        print("\n###### Ready ######\n")
+    @staticmethod
+    async def on_ready():
+        _logger.info("Logged in and ready")
 
     def run(self, *args: Any, **kwargs: Any) -> None:
         if self._running:
             raise RuntimeError("Bot is already running")
         self._running = True
         commands.Bot.run(self, *args, **kwargs)
+
+        self._clean_up()
+
         if self._restart:
-            os.execv(sys.executable, [sys.executable.split("/")[-1], "-u"] + sys.argv)
+            _logger.info("Restarting")
+            os.execv(sys.executable, [sys.executable.split("/")[-1]] + sys.argv)
+        else:
+            _logger.info("Shutting down")
+
+    def _clean_up(self):
+        self._extension_handler.unload_all_extensions()
 
     async def stop(self):
         self._extension_handler.unload_all_extensions()
         await self.close()
 
     async def restart(self):
-        print("R")
         self._restart = True
         await self.stop()
 
