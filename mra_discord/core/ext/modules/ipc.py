@@ -122,7 +122,7 @@ _queues = {}
 
 def _add_queue(name: str) -> None:
     if name in _queues:
-        raise KeyError(f'There is already a queue for "{name}"')
+        raise KeyError(f"There is already a queue for '{name}'")
     _queues[name] = Queue()
 
 
@@ -172,8 +172,8 @@ def establish_connection(target: str, source: str) -> IPCConnection:
 class ExtensionHandlerIPCModule(ExtensionHandlerModule):
 
     def __init__(self, ipc_identifier: str):
-        super().__init__()
         _add_queue(ipc_identifier)
+        super().__init__()
         self._ipc_identifier = ipc_identifier
 
         # maps all commands to their ipc_handlers
@@ -188,8 +188,8 @@ class ExtensionHandlerIPCModule(ExtensionHandlerModule):
         for ipc_handler in self._handlers[extension.name]:
             for ipc_command in ipc_handler.ipc_commands:
                 if ipc_command in self._ipc_handlers:
-                    raise ValueError(f'There is already a function registered for the '
-                                     f'command "{ipc_command}"')
+                    raise ValueError(f"There is already a function registered for the "
+                                     f"command '{ipc_command}'")
                 self._ipc_handlers[ipc_command] = {"handler": ipc_handler, "extension": extension}
 
     def _on_unload(self, extension: Extension):
@@ -250,3 +250,6 @@ class ExtensionHandlerIPCModule(ExtensionHandlerModule):
         package.label(_FIELD_IPC_COMMAND, _COMMAND_STOP)
         _put_manually(self._ipc_identifier, package)
         self._worker.join()
+
+    def cleanup(self):
+        _remove_queue(self._ipc_identifier)

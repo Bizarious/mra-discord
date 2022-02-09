@@ -5,8 +5,11 @@ from core.ext.decorators import on_ipc_message
 from core.ext.modules import ipc
 from core.permissions import owner
 from core.task import TaskHandler, TASK_HANDLER_IDENTIFIER, \
-    FIELD_DATE_STRING, FIELD_OWNER
+    FIELD_DATE_STRING, FIELD_OWNER, FIELD_SOURCE, FIELD_CHANNEL
 from tasks.reminder import FIELD_MESSAGE
+
+
+_COMMAND_STOP = "stop"
 
 
 @extension(auto_load=True, name="Task Handler", target=BOT_IDENTIFIER)
@@ -16,25 +19,31 @@ class TaskManager(commands.Cog):
     """
 
     def __init__(self, bot: "Bot"):
-        self.bot = bot
-        self.t = TaskHandler(["tasks"], ["core/extensions"])
+        self._bot = bot
+        self._task_handler = TaskHandler(["tasks"], ["core/extensions"])
 
     def on_load(self):
-        self.t.start()
+        self._task_handler.start()
 
     def on_unload(self):
-        self.t.terminate()
-        self.t.join()
+        connection = ipc.establish_connection(TASK_HANDLER_IDENTIFIER, BOT_IDENTIFIER)
+        connection.send_and_recv(command=_COMMAND_STOP)
+        connection.end_communication()
+
+        self._task_handler.extension_handler.cleanup()
+        self._task_handler.join()
 
     @commands.command()
     @owner()
-    async def test(self, _):
+    async def test(self, ctx: commands.Context):
         connection = ipc.establish_connection("task", BOT_IDENTIFIER)
 
         package = ipc.IPCPackage()
         package.pack(FIELD_OWNER, 0)
-        package.pack(FIELD_DATE_STRING, "* * * * * *")
+        package.pack(FIELD_DATE_STRING, "* * * * * */2")
         package.pack(FIELD_MESSAGE, "Ha")
+        package.pack(FIELD_SOURCE, BOT_IDENTIFIER)
+        package.pack(FIELD_CHANNEL, ctx.channel.id)
 
         connection.send_and_recv(command="r", task="Reminder", package=package)
         connection.end_communication()
@@ -49,3 +58,7 @@ class TaskIPCHandler:
     @on_ipc_message("r")
     def test_ipc(self, package: ipc.IPCPackage):
         self._task_handler.add_task(package.labels["task"], package.content)
+
+    @on_ipc_message(_COMMAND_STOP)
+    def stop(self, _):
+        self._task_handler.stop()

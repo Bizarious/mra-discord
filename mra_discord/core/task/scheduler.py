@@ -1,11 +1,12 @@
-import logging
-
 from queue import PriorityQueue
 from datetime import datetime, timedelta
-from threading import Thread, Lock
-from typing import Optional
+from threading import Lock
 
 from core.task.task_base import TimeBasedTask
+
+
+TASKS_TO_BE_DELETED = "delete"
+TASKS_TO_BE_EXECUTED = "execute"
 
 
 class TimeTaskScheduler:
@@ -13,7 +14,6 @@ class TimeTaskScheduler:
     def __init__(self):
         self._lock = Lock()
         self._task_queue = PriorityQueue()
-        self._running_tasks = []
         self._next_time = None
 
     def set_next_time(self):
@@ -30,8 +30,9 @@ class TimeTaskScheduler:
         finally:
             self._lock.release()
 
-    def schedule(self) -> Optional[list[TimeBasedTask]]:
+    def schedule(self) -> dict[str: list[TimeBasedTask]]:
         finished_tasks: list[TimeBasedTask] = []
+        tasks_to_execute: list[TimeBasedTask] = []
 
         if self._next_time is not None and \
                 self._next_time <= datetime.now() <= self._next_time + timedelta(seconds=5):
@@ -39,45 +40,30 @@ class TimeTaskScheduler:
             self._lock.acquire()
             try:
 
-                tasks = []
                 while True:
                     if self._task_queue.empty():
                         break
                     task: TimeBasedTask = self._task_queue.get()
                     if task.next_time > self._next_time:
                         break
-                    tasks.append(task)
+                    tasks_to_execute.append(task)
 
-                for task in tasks:
+                for task in tasks_to_execute:
                     task: TimeBasedTask
                     task.set_next_time()
                     if task.next_time is not None:
                         self._task_queue.put(task)
                     else:
                         finished_tasks.append(task)
-                    thread = Thread(target=task.execute)
-                    thread.start()
-                    self._running_tasks.append(thread)
-
-            except Exception as e:
-                logging.error(e)
 
             finally:
                 self._lock.release()
                 self.set_next_time()
 
-            return finished_tasks
-
-        return None
-
-    def clean_terminated_tasks(self):
-        task_thread: Thread
-        self._running_tasks = [task_thread for task_thread in self._running_tasks if task_thread.is_alive()]
-
-    def complete_cleanup(self):
-        task_thread: Thread
-        for task_thread in self._running_tasks:
-            task_thread.join()
+        return {
+            TASKS_TO_BE_DELETED: finished_tasks,
+            TASKS_TO_BE_EXECUTED: tasks_to_execute
+                }
 
     def add_task(self, task: TimeBasedTask):
         self._task_queue.put(task)

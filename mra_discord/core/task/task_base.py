@@ -7,6 +7,8 @@ from core.task.time_calculator import choose_calculator
 FIELD_DATE_STRING = "date_string"
 FIELD_NEXT_TIME = "next_time"
 FIELD_OWNER = "owner"
+FIELD_SOURCE = "source"
+FIELD_CHANNEL = "channel"
 
 
 class TaskPackage:
@@ -53,17 +55,31 @@ class TimeBasedTask:
     def __init__(self, fields: TaskFields):
         self._date_string = fields.get(FIELD_DATE_STRING, required=True)
         self._owner = fields.get(FIELD_OWNER, required=True)
+        self._source = fields.get(FIELD_SOURCE, required=True)
         self._next_time = fields.get(FIELD_NEXT_TIME)
+        self._channel = fields.get(FIELD_CHANNEL)
 
         self._calculator = choose_calculator(self._date_string)()
 
     @property
-    def date_string(self):
+    def date_string(self) -> str:
         return self._date_string
 
     @property
     def next_time(self) -> Optional[datetime]:
         return self._next_time
+
+    @property
+    def source(self) -> str:
+        return self._source
+
+    @property
+    def owner(self) -> int:
+        return self._owner
+
+    @property
+    def channel(self) -> int:
+        return self._channel
 
     def set_next_time(self, time: Optional[datetime] = None):
         if time is None:
@@ -73,8 +89,8 @@ class TimeBasedTask:
                 time = self._next_time
         self._next_time = self._calculator.calculate_next_date_with_context(self._date_string, time)
 
-    def run(self):
+    def run(self) -> Optional[tuple[str, Any]]:
         pass
 
     def execute(self):
-        self.run()
+        return self.run()

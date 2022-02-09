@@ -2,18 +2,52 @@ import logging
 import signal
 
 from multiprocessing import Process
-from random import randint
-from typing import Type
 from queue import Queue, Empty
+from random import randint
+from threading import Thread
+from typing import Type, Callable, Optional, Any
 
-from core.task.task_base import TaskPackage, TimeBasedTask, TaskFields
-from core.task.scheduler import TimeTaskScheduler
+from core.bot import BOT_IDENTIFIER
+from core.task.task_base import TaskPackage, TimeBasedTask, TaskFields, \
+    FIELD_OWNER, FIELD_CHANNEL
+from core.task.scheduler import TimeTaskScheduler, TASKS_TO_BE_EXECUTED, TASKS_TO_BE_DELETED
 from core.ext import load_extensions_from_paths, ExtensionHandler
-from core.ext.modules import ExtensionHandlerIPCModule
+from core.ext.modules import ExtensionHandlerIPCModule, ipc
 
 TASK_HANDLER_IDENTIFIER = "task"
 
+FIELD_IPC_TASK_RESULT = "content"
+
 _logger = logging.getLogger(TASK_HANDLER_IDENTIFIER)
+
+
+def handle_task_result_ipc(result: Optional[tuple[str, Any]], task: TimeBasedTask) -> None:
+    connection = ipc.establish_connection(BOT_IDENTIFIER, TASK_HANDLER_IDENTIFIER)
+
+    package = ipc.IPCPackage()
+    package.pack(FIELD_IPC_TASK_RESULT, result[1])
+    package.pack(FIELD_OWNER, task.owner)
+    package.pack(FIELD_CHANNEL, task.channel)
+
+    connection.send_and_recv(command=result[0], package=package)
+    connection.end_communication()
+
+
+class TaskExecutorThread(Thread):
+
+    def __init__(self,
+                 task: TimeBasedTask,
+                 result_handler: Callable[[Optional[tuple[str, Any]], TimeBasedTask], None]
+                 ):
+
+        super().__init__()
+        self._task = task
+        self._result_handler = result_handler
+
+    def run(self) -> None:
+        result = self._task.execute()
+        if result is not None:
+            self._result_handler(result, self._task)
 
 
 class TaskHandler(Process):
@@ -35,12 +69,13 @@ class TaskHandler(Process):
 
         self._extension_handler = ExtensionHandler(self, TASK_HANDLER_IDENTIFIER, *extension_paths)
         self._extension_handler.add_module(ExtensionHandlerIPCModule(TASK_HANDLER_IDENTIFIER))
-        self._extension_handler.load_extensions_from_paths()
-
-        self.register_all_tasks()
 
         signal.signal(signal.SIGINT, self.stop)
         signal.signal(signal.SIGTERM, self.stop)
+
+    @property
+    def extension_handler(self):
+        return self._extension_handler
 
     def register_all_tasks(self):
         task_packages: list[TaskPackage] = load_extensions_from_paths(*self._paths, tps="TaskPackage")
@@ -56,16 +91,21 @@ class TaskHandler(Process):
         self._stop_queue.put("")
 
     def cleanup(self):
-        self._time_scheduler.complete_cleanup()
         self._extension_handler.stop_modules()
         self._extension_handler.unload_all_extensions()
 
     def run(self) -> None:
+        self.register_all_tasks()
+        self._extension_handler.load_extensions_from_paths()
         self._extension_handler.start_modules()
         _logger.info("Started successfully")
 
         while True:
-            self._time_scheduler.schedule()
+            tasks_to_handle = self._time_scheduler.schedule()
+            delete = tasks_to_handle[TASKS_TO_BE_DELETED]
+            execute = tasks_to_handle[TASKS_TO_BE_EXECUTED]
+            for e in execute:
+                TaskExecutorThread(e, handle_task_result_ipc).start()
 
             try:
                 self._stop_queue.get(timeout=0.5)

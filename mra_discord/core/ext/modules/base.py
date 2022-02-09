@@ -35,3 +35,6 @@ class ExtensionHandlerModule:
 
     def stop(self):
         pass
+
+    def cleanup(self):
+        pass

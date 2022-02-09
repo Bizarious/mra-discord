@@ -2,6 +2,7 @@ import os
 import sys
 import logging
 
+from enum import Enum
 from typing import Any
 
 import nextcord
@@ -18,6 +19,11 @@ BOT_IDENTIFIER = "bot"
 _logger = logging.getLogger(BOT_IDENTIFIER)
 
 
+class SendTo(Enum):
+    USER = 0
+    CHANNEL = 1
+
+
 class Bot(commands.Bot):
 
     def __init__(self, *,
@@ -32,7 +38,6 @@ class Bot(commands.Bot):
         self._extension_handler = ExtensionHandler(self, BOT_IDENTIFIER, *extension_paths)
         self._extension_handler.add_module(ExtensionHandlerCogModule(self))
         self._extension_handler.add_module(ExtensionHandlerIPCModule(BOT_IDENTIFIER))
-        self._extension_handler.load_extensions_from_paths()
 
         self._data_provider = DataProvider(data_path)
         self._permissions = Permissions(self._data_provider)
@@ -58,6 +63,7 @@ class Bot(commands.Bot):
         _logger.info("Logged in and ready")
 
     def run(self, *args: Any, **kwargs: Any) -> None:
+        self._extension_handler.load_extensions_from_paths()
         self._extension_handler.start_modules()
 
         if self._running:
@@ -65,7 +71,7 @@ class Bot(commands.Bot):
         self._running = True
         commands.Bot.run(self, *args, **kwargs)
 
-        self._clean_up()
+        self._cleanup()
 
         if self._restart:
             _logger.info("Restarting")
@@ -73,8 +79,9 @@ class Bot(commands.Bot):
         else:
             _logger.info("Shutting down")
 
-    def _clean_up(self):
+    def _cleanup(self):
         self._extension_handler.stop_modules()
+        self._extension_handler.cleanup()
         self._extension_handler.unload_all_extensions()
 
     async def stop(self):
@@ -83,6 +90,12 @@ class Bot(commands.Bot):
     async def restart(self):
         self._restart = True
         await self.stop()
+
+    async def send_to(self, destination: SendTo, identifier: int, content: str):
+        if destination == SendTo.USER:
+            await self.get_user(identifier).send(content)
+        elif destination == SendTo.CHANNEL:
+            await self.get_channel(identifier).send(content)
 
     async def register_bulk_application_commands(self) -> None:
         # seems to be abstract in base class
