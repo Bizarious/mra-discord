@@ -14,7 +14,7 @@ import nextcord
 if __name__ == "__main__":
     # logger setup bot
     _LOGGER_FORMAT = "[{asctime}]  {name: <4}  {levelname: <8}  {message}"
-    _LOG_LEVEL = logging.DEBUG
+    _LOG_LEVEL = logging.INFO
 
     _log_formatter = logging.Formatter(_LOGGER_FORMAT, style="{")
 

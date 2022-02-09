@@ -1,3 +1,5 @@
+import logging
+
 from queue import PriorityQueue
 from datetime import datetime, timedelta
 from threading import Lock
@@ -7,6 +9,9 @@ from core.task.task_base import TimeBasedTask
 
 TASKS_TO_BE_DELETED = "delete"
 TASKS_TO_BE_EXECUTED = "execute"
+
+
+_logger = logging.getLogger("task")
 
 
 class TimeTaskScheduler:
@@ -35,18 +40,19 @@ class TimeTaskScheduler:
         tasks_to_execute: list[TimeBasedTask] = []
 
         if self._next_time is not None and \
-                self._next_time <= datetime.now() <= self._next_time + timedelta(seconds=5):
+                self._next_time <= datetime.now().replace(microsecond=0) <= self._next_time + timedelta(seconds=5):
 
             self._lock.acquire()
             try:
 
                 while True:
-                    if self._task_queue.empty():
-                        break
                     task: TimeBasedTask = self._task_queue.get()
                     if task.next_time > self._next_time:
+                        self._task_queue.put(task)
                         break
                     tasks_to_execute.append(task)
+                    if self._task_queue.empty():
+                        break
 
                 for task in tasks_to_execute:
                     task: TimeBasedTask

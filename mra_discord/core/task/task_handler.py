@@ -9,7 +9,7 @@ from typing import Type, Callable, Optional, Any
 
 from core.bot import BOT_IDENTIFIER
 from core.task.task_base import TaskPackage, TimeBasedTask, TaskFields, \
-    FIELD_OWNER, FIELD_CHANNEL
+    FIELD_OWNER, FIELD_CHANNEL, FIELD_ID
 from core.task.scheduler import TimeTaskScheduler, TASKS_TO_BE_EXECUTED, TASKS_TO_BE_DELETED
 from core.ext import load_extensions_from_paths, ExtensionHandler
 from core.ext.modules import ExtensionHandlerIPCModule, ipc
@@ -104,8 +104,12 @@ class TaskHandler(Process):
             tasks_to_handle = self._time_scheduler.schedule()
             delete = tasks_to_handle[TASKS_TO_BE_DELETED]
             execute = tasks_to_handle[TASKS_TO_BE_EXECUTED]
+
             for e in execute:
                 TaskExecutorThread(e, handle_task_result_ipc).start()
+                _logger.debug(f"Executed {e.identifier}")
+            for d in delete:
+                self.remove_task_from_dict(d)
 
             try:
                 self._stop_queue.get(timeout=0.5)
@@ -128,9 +132,9 @@ class TaskHandler(Process):
                 break
         return identifier
 
-    @staticmethod
-    def build_task(task_class: Type[TimeBasedTask], task_arguments: dict) -> TimeBasedTask:
+    def build_task(self, task_class: Type[TimeBasedTask], task_arguments: dict) -> TimeBasedTask:
         fields = TaskFields(task_arguments)
+        fields.put(FIELD_ID, self._create_unique_task_id())
         return task_class(fields)
 
     def add_task_to_queue(self, task: TimeBasedTask):
@@ -139,6 +143,13 @@ class TaskHandler(Process):
     def add_task(self, task_name: str, task_arguments: dict):
         task_class = self._task_classes[task_name]
         task = self.build_task(task_class, task_arguments)
+        self._tasks[task.identifier] = task
         task.set_next_time()
-        self._tasks[self._create_unique_task_id()] = task
         self.add_task_to_queue(task)
+        _logger.debug(f"Added {task.identifier} - tasks: {self._tasks}")
+
+    def remove_task_from_dict(self, task: TimeBasedTask):
+        if task.identifier not in self._tasks:
+            raise KeyError(f"The task with id '{task.identifier}' is not found")
+        self._tasks.pop(task.identifier)
+        _logger.debug(f"Deleted {task.identifier} - tasks: {self._tasks}")

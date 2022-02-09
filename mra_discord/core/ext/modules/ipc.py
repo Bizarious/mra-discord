@@ -145,7 +145,7 @@ def _put_manually(target: str, package: IPCPackage) -> None:
     _queues[target].put(package)
 
 
-def establish_connection(target: str, source: str) -> IPCConnection:
+def establish_connection(target: str, source: str, *, timeout: float = 5.0) -> IPCConnection:
     if target not in _queues:
         raise KeyError(f'Cannot establish connection: target "{target}" is not registered')
 
@@ -160,8 +160,10 @@ def establish_connection(target: str, source: str) -> IPCConnection:
     _queues[target].put(package)
 
     connection = IPCConnection(connection1, source, target)
-    ready_package = connection.recv()
+    ready_package = connection.recv(timeout=timeout)
 
+    if ready_package is None:
+        raise ConnectionError(f"{target} has not accepted connection")
     if ready_package.labels[_FIELD_IPC_STATUS] != _STATUS_READY:
         raise ConnectionError(f"{target} has returned non-ready status")
 

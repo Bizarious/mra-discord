@@ -26,12 +26,15 @@ class TaskManager(commands.Cog):
         self._task_handler.start()
 
     def on_unload(self):
-        connection = ipc.establish_connection(TASK_HANDLER_IDENTIFIER, BOT_IDENTIFIER)
-        connection.send_and_recv(command=_COMMAND_STOP)
-        connection.end_communication()
-
-        self._task_handler.extension_handler.cleanup()
+        try:
+            connection = ipc.establish_connection(TASK_HANDLER_IDENTIFIER, BOT_IDENTIFIER, timeout=1)
+            connection.send_and_recv(command=_COMMAND_STOP)
+            connection.end_communication()
+        except ConnectionError:
+            # task handler was already stopped by external signal, so connection will fail
+            pass
         self._task_handler.join()
+        self._task_handler.extension_handler.cleanup()
 
     @commands.command()
     @owner()
@@ -40,12 +43,23 @@ class TaskManager(commands.Cog):
 
         package = ipc.IPCPackage()
         package.pack(FIELD_OWNER, 0)
-        package.pack(FIELD_DATE_STRING, "* * * * * */2")
+        package.pack(FIELD_DATE_STRING, "4s")
         package.pack(FIELD_MESSAGE, "Ha")
         package.pack(FIELD_SOURCE, BOT_IDENTIFIER)
         package.pack(FIELD_CHANNEL, ctx.channel.id)
 
-        connection.send_and_recv(command="r", task="Reminder", package=package)
+        result = connection.send_and_recv(command="r", task="Reminder", package=package)
+        print(result.content)
+
+        package = ipc.IPCPackage()
+        package.pack(FIELD_OWNER, 0)
+        package.pack(FIELD_DATE_STRING, "2s")
+        package.pack(FIELD_MESSAGE, "Bla")
+        package.pack(FIELD_SOURCE, BOT_IDENTIFIER)
+        package.pack(FIELD_CHANNEL, ctx.channel.id)
+
+        result = connection.send_and_recv(command="r", task="Reminder", package=package)
+        print(result.content)
         connection.end_communication()
 
 

@@ -9,6 +9,7 @@ FIELD_NEXT_TIME = "next_time"
 FIELD_OWNER = "owner"
 FIELD_SOURCE = "source"
 FIELD_CHANNEL = "channel"
+FIELD_ID = "id"
 
 
 class TaskPackage:
@@ -49,6 +50,11 @@ class TaskFields:
                 raise KeyError(f"The field '{key}' is required")
         return self._raw_dict.get(key, default)
 
+    def put(self, key: str, value: Any):
+        if key in self._raw_dict:
+            raise KeyError(f"The key '{key}' already exists")
+        self._raw_dict[key] = value
+
 
 class TimeBasedTask:
 
@@ -58,8 +64,18 @@ class TimeBasedTask:
         self._source = fields.get(FIELD_SOURCE, required=True)
         self._next_time = fields.get(FIELD_NEXT_TIME)
         self._channel = fields.get(FIELD_CHANNEL)
+        self._id = fields.get(FIELD_ID, required=True)
 
         self._calculator = choose_calculator(self._date_string)()
+        if self._calculator is None:
+            raise ValueError("Time calculator must not be None")
+
+    def __lt__(self, other: "TimeBasedTask"):
+        if self.next_time is None:
+            return False
+        elif other.next_time is None:
+            return True
+        return self._next_time < other.next_time
 
     @property
     def date_string(self) -> str:
@@ -81,10 +97,14 @@ class TimeBasedTask:
     def channel(self) -> int:
         return self._channel
 
+    @property
+    def identifier(self) -> str:
+        return self._id
+
     def set_next_time(self, time: Optional[datetime] = None):
         if time is None:
             if self._next_time is None:
-                time = datetime.now()
+                time = datetime.now().replace(microsecond=0)
             else:
                 time = self._next_time
         self._next_time = self._calculator.calculate_next_date_with_context(self._date_string, time)
