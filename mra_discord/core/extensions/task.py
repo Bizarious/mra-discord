@@ -36,7 +36,7 @@ class TaskManager(commands.Cog):
         package.pack(FIELD_DATE_STRING, "* * * * * *")
         package.pack(FIELD_MESSAGE, "Ha")
 
-        connection.send(command="r", task="Reminder", package=package)
+        connection.send_and_recv(command="r", task="Reminder", package=package)
         connection.end_communication()
 
 
