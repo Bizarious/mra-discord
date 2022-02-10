@@ -150,3 +150,11 @@ class TaskHandler(Process):
             raise KeyError(f"The task with id '{task.identifier}' is not found")
         self._tasks.pop(task.identifier)
         _logger.debug(f"Deleted {task.identifier} - tasks: {self._tasks}")
+
+    def get_task_by_id(self, identifier: str) -> TimeBasedTask:
+        if identifier not in self._tasks:
+            raise KeyError(f"The task with id {identifier} does not exist")
+        return self._tasks[identifier]
+
+    def get_all_tasks(self) -> dict[str: TimeBasedTask]:
+        return {k: v for k, v in self._tasks.items()}

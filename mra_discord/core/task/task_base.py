@@ -92,7 +92,7 @@ class TimeBasedTask:
         return self._fields.get(TASK_FIELD_SOURCE)
 
     @property
-    def owner(self) -> int:
+    def author(self) -> int:
         return self._fields.get(TASK_FIELD_OWNER)
 
     @property
