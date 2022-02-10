@@ -3,7 +3,7 @@ from core import Bot, BOT_IDENTIFIER
 from core.ext import extension
 
 
-@extension(auto_load=True, target=BOT_IDENTIFIER)
+@extension(auto_load=False, target=BOT_IDENTIFIER)
 class BaseErrorHandler(commands.Cog):
 
     def __init__(self, bot: "Bot"):

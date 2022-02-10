@@ -8,8 +8,7 @@ from threading import Thread
 from typing import Type, Callable, Optional, Any
 
 from core.bot import BOT_IDENTIFIER
-from core.task.task_base import TaskPackage, TimeBasedTask, TaskFields, \
-    FIELD_OWNER, FIELD_CHANNEL, FIELD_ID
+from core.task.task_base import TaskPackage, TimeBasedTask, TaskFields, TASK_FIELD_ID
 from core.task.scheduler import TimeTaskScheduler, TASKS_TO_BE_EXECUTED, TASKS_TO_BE_DELETED
 from core.ext import load_extensions_from_paths, ExtensionHandler
 from core.ext.modules import ExtensionHandlerIPCModule, ipc
@@ -24,12 +23,9 @@ _logger = logging.getLogger(TASK_HANDLER_IDENTIFIER)
 def handle_task_result_ipc(result: Optional[tuple[str, Any]], task: TimeBasedTask) -> None:
     connection = ipc.establish_connection(BOT_IDENTIFIER, TASK_HANDLER_IDENTIFIER)
 
-    package = ipc.IPCPackage()
-    package.pack(FIELD_IPC_TASK_RESULT, result[1])
-    package.pack(FIELD_OWNER, task.owner)
-    package.pack(FIELD_CHANNEL, task.channel)
+    package = ipc.IPCPackage(command=result).pack(task.fields.raw_dict)
 
-    connection.send_and_recv(command=result[0], package=package)
+    connection.send_and_recv(package)
     connection.end_communication()
 
 
@@ -111,6 +107,7 @@ class TaskHandler(Process):
             for d in delete:
                 self.remove_task_from_dict(d)
 
+            # for ending the loop
             try:
                 self._stop_queue.get(timeout=0.5)
             except Empty:
@@ -134,7 +131,7 @@ class TaskHandler(Process):
 
     def build_task(self, task_class: Type[TimeBasedTask], task_arguments: dict) -> TimeBasedTask:
         fields = TaskFields(task_arguments)
-        fields.put(FIELD_ID, self._create_unique_task_id())
+        fields.set(TASK_FIELD_ID, self._create_unique_task_id())
         return task_class(fields)
 
     def add_task_to_queue(self, task: TimeBasedTask):

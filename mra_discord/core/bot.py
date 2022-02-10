@@ -63,8 +63,8 @@ class Bot(commands.Bot):
         _logger.info("Logged in and ready")
 
     def run(self, *args: Any, **kwargs: Any) -> None:
-        self._extension_handler.load_extensions_from_paths()
         self._extension_handler.start_modules()
+        self._extension_handler.load_extensions_from_paths()
 
         if self._running:
             raise RuntimeError("Bot is already running")
@@ -81,7 +81,6 @@ class Bot(commands.Bot):
 
     def _cleanup(self):
         self._extension_handler.stop_modules()
-        self._extension_handler.cleanup()
         self._extension_handler.unload_all_extensions()
 
     async def stop(self):

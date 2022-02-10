@@ -7,11 +7,11 @@ from core.ext import extension
 from core.ext.modules import ipc
 from core.ext.decorators import on_ipc_message
 from core.permissions import owner
-from core.task import FIELD_IPC_TASK_RESULT
-from core.task.task_base import FIELD_CHANNEL
 
 
 COMMAND_IPC_SEND = "send"
+CONTENT_FIELD_MESSAGE = "message"
+CONTENT_FIELD_CHANNEL = "channel"
 
 
 @extension(auto_load=True, target=BOT_IDENTIFIER)
@@ -62,6 +62,6 @@ class System(commands.Cog):
 
     @on_ipc_message(COMMAND_IPC_SEND)
     def _send(self, package: ipc.IPCPackage):
-        message: str = package.content[FIELD_IPC_TASK_RESULT]
-        channel: int = package.content[FIELD_CHANNEL]
+        message: str = package.content[CONTENT_FIELD_MESSAGE]
+        channel: int = package.content[CONTENT_FIELD_CHANNEL]
         self._send_queue.put((channel, SendTo.CHANNEL, message))

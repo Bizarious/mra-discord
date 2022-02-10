@@ -2,14 +2,13 @@ from datetime import datetime
 from typing import Optional, Type, Any
 
 from core.task.time_calculator import choose_calculator
+from core.ext.modules import ipc
 
-
-FIELD_DATE_STRING = "date_string"
-FIELD_NEXT_TIME = "next_time"
-FIELD_OWNER = "owner"
-FIELD_SOURCE = "source"
-FIELD_CHANNEL = "channel"
-FIELD_ID = "id"
+TASK_FIELD_DATE_STRING = "date_string"
+TASK_FIELD_NEXT_TIME = "next_time"
+TASK_FIELD_SOURCE = "source"
+TASK_FIELD_ID = "id"
+TASK_FIELD_OWNER = ipc.CONTENT_FIELD_AUTHOR
 
 
 class TaskPackage:
@@ -32,6 +31,7 @@ def task(name: Optional[str] = None):
         if name is None:
             return TaskPackage(cls.__name__, cls)
         return TaskPackage(name, cls)
+
     return dec
 
 
@@ -44,29 +44,31 @@ class TaskFields:
     def raw_dict(self):
         return self._raw_dict
 
-    def get(self, key: str, default: Any = None, required: bool = False):
-        if required:
-            if key not in self._raw_dict.keys():
-                raise KeyError(f"The field '{key}' is required")
-        return self._raw_dict.get(key, default)
+    def get(self, key: str):
+        return self._raw_dict.get(key)
 
-    def put(self, key: str, value: Any):
-        if key in self._raw_dict:
-            raise KeyError(f"The key '{key}' already exists")
+    def set(self, key: str, value: Any):
         self._raw_dict[key] = value
+
+    def check_and_set(self, key: str, default: Any = None, required: bool = False):
+        if key not in self._raw_dict.keys():
+            if required:
+                raise KeyError(f"The field '{key}' is required")
+            self._raw_dict[key] = default
 
 
 class TimeBasedTask:
 
     def __init__(self, fields: TaskFields):
-        self._date_string = fields.get(FIELD_DATE_STRING, required=True)
-        self._owner = fields.get(FIELD_OWNER, required=True)
-        self._source = fields.get(FIELD_SOURCE, required=True)
-        self._next_time = fields.get(FIELD_NEXT_TIME)
-        self._channel = fields.get(FIELD_CHANNEL)
-        self._id = fields.get(FIELD_ID, required=True)
+        fields.check_and_set(TASK_FIELD_DATE_STRING, required=True)
+        fields.check_and_set(TASK_FIELD_OWNER, required=True)
+        fields.check_and_set(TASK_FIELD_SOURCE, required=True)
+        fields.check_and_set(TASK_FIELD_ID, required=True)
+        fields.check_and_set(TASK_FIELD_NEXT_TIME)
 
-        self._calculator = choose_calculator(self._date_string)()
+        self._fields = fields
+
+        self._calculator = choose_calculator(self.date_string)()
         if self._calculator is None:
             raise ValueError("Time calculator must not be None")
 
@@ -75,39 +77,42 @@ class TimeBasedTask:
             return False
         elif other.next_time is None:
             return True
-        return self._next_time < other.next_time
+        return self.next_time < other.next_time
 
     @property
     def date_string(self) -> str:
-        return self._date_string
+        return self._fields.get(TASK_FIELD_DATE_STRING)
 
     @property
     def next_time(self) -> Optional[datetime]:
-        return self._next_time
+        return self._fields.get(TASK_FIELD_NEXT_TIME)
 
     @property
     def source(self) -> str:
-        return self._source
+        return self._fields.get(TASK_FIELD_SOURCE)
 
     @property
     def owner(self) -> int:
-        return self._owner
-
-    @property
-    def channel(self) -> int:
-        return self._channel
+        return self._fields.get(TASK_FIELD_OWNER)
 
     @property
     def identifier(self) -> str:
-        return self._id
+        return self._fields.get(TASK_FIELD_ID)
+
+    @property
+    def fields(self) -> TaskFields:
+        return self._fields
 
     def set_next_time(self, time: Optional[datetime] = None):
         if time is None:
-            if self._next_time is None:
+            if self.next_time is None:
                 time = datetime.now().replace(microsecond=0)
             else:
-                time = self._next_time
-        self._next_time = self._calculator.calculate_next_date_with_context(self._date_string, time)
+                time = self.next_time
+        self._fields.set(
+            TASK_FIELD_NEXT_TIME,
+            self._calculator.calculate_next_date_with_context(self.date_string, time)
+        )
 
     def run(self) -> Optional[tuple[str, Any]]:
         pass

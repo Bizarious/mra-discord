@@ -171,7 +171,3 @@ class ExtensionHandler:
     def stop_modules(self):
         for module in self._modules:
             module.stop()
-
-    def cleanup(self):
-        for module in self._modules:
-            module.cleanup()

@@ -21,19 +21,13 @@ class TimeTaskScheduler:
         self._task_queue = PriorityQueue()
         self._next_time = None
 
-    def set_next_time(self):
-        self._lock.acquire()
-
-        try:
-            if not self._task_queue.empty():
-                task: TimeBasedTask = self._task_queue.get()
-                self._next_time = task.next_time
-                self._task_queue.put(task)
-            else:
-                self._next_time = None
-
-        finally:
-            self._lock.release()
+    def _set_next_time(self):
+        if not self._task_queue.empty():
+            task: TimeBasedTask = self._task_queue.get()
+            self._next_time = task.next_time
+            self._task_queue.put(task)
+        else:
+            self._next_time = None
 
     def schedule(self) -> dict[str: list[TimeBasedTask]]:
         finished_tasks: list[TimeBasedTask] = []
@@ -63,8 +57,8 @@ class TimeTaskScheduler:
                         finished_tasks.append(task)
 
             finally:
+                self._set_next_time()
                 self._lock.release()
-                self.set_next_time()
 
         return {
             TASKS_TO_BE_DELETED: finished_tasks,
@@ -72,5 +66,9 @@ class TimeTaskScheduler:
                 }
 
     def add_task(self, task: TimeBasedTask):
-        self._task_queue.put(task)
-        self.set_next_time()
+        self._lock.acquire()
+        try:
+            self._task_queue.put(task)
+            self._set_next_time()
+        finally:
+            self._lock.release()
