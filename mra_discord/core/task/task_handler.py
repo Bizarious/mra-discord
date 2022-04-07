@@ -5,10 +5,10 @@ from multiprocessing import Process
 from queue import Queue, Empty
 from random import randint
 from threading import Thread
-from typing import Type, Callable, Optional, Any
+from typing import Callable, Optional, Any
 
 from core.bot import BOT_IDENTIFIER
-from core.task.task_base import TaskPackage, TimeBasedTask, TaskFields, TASK_FIELD_ID
+from core.task.task_base import TaskPackage, TimeBasedTask, TaskFields, TASK_FIELD_ID, TASK_FIELD_TYPE
 from core.task.scheduler import TimeTaskScheduler, TASKS_TO_BE_EXECUTED, TASKS_TO_BE_DELETED
 from core.ext import load_extensions_from_paths, ExtensionHandler
 from core.ext.modules import ExtensionHandlerIPCModule, ipc
@@ -53,7 +53,7 @@ class TaskHandler(Process):
 
         self._paths = task_paths
 
-        self._task_classes = {}
+        self._task_packages = {}
 
         # maps all tasks to their ids
         self._tasks = {}
@@ -78,10 +78,10 @@ class TaskHandler(Process):
 
         for task_package in task_packages:
 
-            if task_package.name in self._task_classes:
+            if task_package.name in self._task_packages:
                 raise KeyError(f'The task class "{task_package.name}" already exists')
 
-            self._task_classes[task_package.name] = task_package.task_class
+            self._task_packages[task_package.name] = task_package
 
     def stop(self, *_):
         self._stop_queue.put("")
@@ -129,17 +129,19 @@ class TaskHandler(Process):
                 break
         return identifier
 
-    def build_task(self, task_class: Type[TimeBasedTask], task_arguments: dict) -> TimeBasedTask:
+    def build_task(self, task_package: TaskPackage, task_arguments: dict) -> TimeBasedTask:
         fields = TaskFields(task_arguments)
         fields.set(TASK_FIELD_ID, self._create_unique_task_id())
-        return task_class(fields)
+        fields.set(TASK_FIELD_TYPE, task_package.name)
+        fields = task_package.fields_checker(fields)
+        return task_package.task_class(fields)
 
     def add_task_to_queue(self, task: TimeBasedTask):
         self._time_scheduler.add_task(task)
 
     def add_task(self, task_name: str, task_arguments: dict):
-        task_class = self._task_classes[task_name]
-        task = self.build_task(task_class, task_arguments)
+        task_package = self._task_packages[task_name]
+        task = self.build_task(task_package, task_arguments)
         self._tasks[task.identifier] = task
         task.set_next_time()
         self.add_task_to_queue(task)

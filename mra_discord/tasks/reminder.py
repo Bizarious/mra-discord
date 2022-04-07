@@ -1,18 +1,20 @@
-from core.task import TimeBasedTask
-from core.task import task
+from typing import Optional, Any
+
+from core.task import TimeBasedTask, task, TaskFields, TASK_FIELD_CHANNEL
+from core.extensions.system import COMMAND_IPC_SEND, CONTENT_FIELD_MESSAGE
 
 
-@task("Reminder")
+TASK_NAME = "Reminder"
+
+
+def _reminder_fields_checker(fields: TaskFields) -> TaskFields:
+    fields.check_and_set(CONTENT_FIELD_MESSAGE, required=True)
+    fields.check_and_set(TASK_FIELD_CHANNEL)
+    return fields
+
+
+@task(TASK_NAME, _reminder_fields_checker)
 class Reminder(TimeBasedTask):
-    def __init__(self, *, author_id, channel_id, server_id=None, date_string, number, label, message, message_args):
-        TimeBasedTask.__init__(self, author_id=author_id,
-                               channel_id=channel_id,
-                               server_id=server_id,
-                               date_string=date_string,
-                               label=label,
-                               number=number)
-        self.message = message
-        self.message_args = message_args
 
-    def run(self):
-        return "send", self.message, self.message_args
+    def run(self) -> Optional[tuple[str, Any]]:
+        return COMMAND_IPC_SEND
