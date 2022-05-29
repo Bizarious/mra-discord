@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
-from typing import TypeVar, Union
 from threading import Lock
+from typing import TypeVar, Union, Callable, Any, Optional
 
 _T = TypeVar("_T")
 _KT = TypeVar("_KT")
@@ -40,6 +40,10 @@ class Savable:
     def do_save(self) -> bool:
         return self._do_save
 
+    @property
+    def lock(self) -> Lock:
+        return self._lock
+
     @do_save.setter
     def do_save(self, save: bool) -> None:
         self._do_save = save
@@ -50,73 +54,65 @@ class Savable:
         if self._do_save:
             if self.parent == self:
                 with open(self._path, "w") as file:
-                    json.dump(self, file)
+                    json.dump(self, file, indent=0)
             else:
                 self.parent.save()
 
 
+def _lock_and_save(func: Callable[[Savable, ...], Any]) -> Callable[[Savable, ...], Any]:
+    def lock_and_save0(savable: Savable, *args, **kwargs) -> Any:
+        savable.lock.acquire()
+        try:
+            maybe_return = func(savable, *args, **kwargs)
+            savable.save()
+        finally:
+            savable.lock.release()
+        return maybe_return
+    return lock_and_save0
+
+
 class DataDict(Savable, dict):
 
-    def __init__(self, kwargs: dict, parent: Savable = None, *, path: Path):
-        # converts all elements recursively to data lists and data dicts
+    def __init__(self, kwargs: Optional[dict] = None, *, parent: Optional[Savable] = None, path: Path):
+        # converts all elements recursively to savables
+        kwargs = kwargs or dict()
         for key in kwargs:
             kwargs[key] = convert(kwargs[key], path, self)
 
         dict.__init__(self, kwargs)
         Savable.__init__(self, parent, path=path)
 
+    @_lock_and_save
     def __setitem__(self, key, value):
-        self._lock.acquire()
-        try:
-            dict.__setitem__(self, key, convert(value, self._path, self))
-            self.save()
-        finally:
-            self._lock.release()
+        dict.__setitem__(self, key, convert(value, self._path, self))
 
+    @_lock_and_save
     def pop(self, key: _KT) -> _VT:
-        self._lock.acquire()
-        try:
-            value = dict.pop(self, key)
-            self.save()
-        finally:
-            self._lock.release()
-
+        value = dict.pop(self, key)
         return value
 
 
 class DataList(Savable, list):
 
-    def __init__(self, seq: list = (), parent: Savable = None, *, path: Path):
+    def __init__(self, seq: Optional[list] = None, *, parent: Savable = None, path: Path):
         # converts all elements recursively to data lists and data dicts
+        seq = seq or list()
         seq = [convert(s, path, self) for s in seq]
 
         list.__init__(self, seq)
         Savable.__init__(self, parent, path=path)
 
+    @_lock_and_save
     def append(self, __object: _T) -> None:
-        self._lock.acquire()
-        try:
-            list.append(self, convert(__object, self._path, self))
-            self.save()
-        finally:
-            self._lock.release()
+        list.append(self, convert(__object, self._path, self))
 
+    @_lock_and_save
     def remove(self, __value: _T) -> None:
-        self._lock.acquire()
-        try:
-            list.remove(self, __value)
-            self.save()
-        finally:
-            self._lock.release()
+        list.remove(self, __value)
 
+    @_lock_and_save
     def pop(self, __index: int = ...) -> _T:
-        self._lock.acquire()
-        try:
-            element = list.pop(self, __index)
-            self.save()
-        finally:
-            self._lock.release()
-
+        element = list.pop(self, __index)
         return element
 
 
