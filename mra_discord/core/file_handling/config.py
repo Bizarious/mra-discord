@@ -2,10 +2,11 @@ import os
 from abc import ABC, abstractmethod
 from pathlib import Path
 from threading import Lock
-from typing import Optional, Dict
+from typing import Optional, Dict, Union
 
 from dotenv import dotenv_values
 
+from core.file_handling.data import maybe_convert_str_to_path
 from core.file_handling.savable import DataDict
 
 _lock = Lock()
@@ -21,10 +22,11 @@ class ConfigCategoryError(Exception):
     pass
 
 
-def set_config_path(path: Path):
+def set_config_path(path: Union[str, Path]) -> None:
+    path = maybe_convert_str_to_path(path)
     global _config_path
     if _config_path is not None:
-        raise ConfigPathError("Data path can only be set once")
+        raise ConfigPathError("Config path can only be set once")
     _config_path = path
 
     # if config path does not exist, it is created
@@ -35,32 +37,22 @@ def set_config_path(path: Path):
 class _ConfigCategory:
     """ Contains all config settings belonging to one category. """
 
-    def __init__(self, name: str):
+    def __init__(self, name: str, initial_values: Optional[Dict] = None, *, frozen: bool = False):
         self._name = name
-        self._config_data = DataDict(path=Path(f"{_config_path}/{name}.json"))
-        self._frozen = False
+        self._config_data = DataDict(initial_values, path=Path(f"{_config_path}/{name}.json"))
+        self._frozen = frozen
 
     def get(self, key: str, *, default: Optional[str] = None) -> Optional[str]:
-        if key not in self._config_data:
-            if self._frozen:
-                raise ConfigCategoryError(
-                    f"Please specify an existing key. "
-                    f"The category '{self._name}' is frozen and therefore cannot be changed."
-                )
-            else:
-                self._config_data[key] = default
-                return default
-        else:
-            return self._config_data[key]
+        return self._config_data.get(key, default)
 
     def set(self, key: str, value: Optional[str]):
         if self._frozen:
             raise ConfigCategoryError(f"The category '{self._name}' is frozen and therefore cannot be changed.")
         self._config_data[key] = value
 
-    def freeze(self):
-        """ Freezes the config category so that config values cannot be changed anymore """
-        self._frozen = True
+    @classmethod
+    def frozen(cls, name: str, initial_values: Optional[Dict] = None):
+        return cls(name, initial_values, frozen=True)
 
 
 def get_config_category(category: str) -> _ConfigCategory:
@@ -82,14 +74,11 @@ def get_config_category(category: str) -> _ConfigCategory:
 class ExternalConfigImporter(ABC):
     """ Base class for importing config settings from external sources. """
 
-    def __init__(self):
-        self._external_category = get_config_category("external")
-
     @abstractmethod
     def extract_config_values(self, file: Path) -> Dict[str, str]:
-        config = dotenv_values(file)
+        pass
 
-    def import_from_file(self, file: Path):
+    def import_from_file(self, file: Union[str, Path]):
         pass
 
 
