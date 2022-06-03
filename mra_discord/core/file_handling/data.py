@@ -1,4 +1,3 @@
-import json
 import os
 from pathlib import Path
 from threading import Lock
@@ -11,18 +10,26 @@ _data_path = None
 _data_elements = {}
 
 
+def maybe_convert_str_to_path(path: Union[str, Path]) -> Path:
+    if type(path) == str:
+        return Path(path)
+    return path
+
+
 class DataPathError(Exception):
     pass
 
 
-def set_data_path(path: Path):
+def set_data_path(path: Union[str, Path]):
+    path = maybe_convert_str_to_path(path)
     global _data_path
     if _data_path is not None:
         raise DataPathError("Data path can only be set once")
     _data_path = path
 
 
-def get_json_data(path_from_data_dir: Path, default_value: Optional[Union[list, dict]] = None):
+def get_json_data(path_from_data_dir: Union[str, Path], default_value: Optional[Union[list, dict]] = None):
+    path_from_data_dir = maybe_convert_str_to_path(path_from_data_dir)
     if _data_path is None:
         raise DataPathError("Data path must be set")
     if path_from_data_dir.is_dir():
@@ -37,23 +44,23 @@ def get_json_data(path_from_data_dir: Path, default_value: Optional[Union[list, 
             data_element = _data_elements[path_from_data_dir]
 
         else:
-            # if it does not exist, it is created
+            # if path (e.g. file or dirs) does not exist, it is created
             required_path = Path(f"{_data_path}/{path_from_data_dir}")
             if default_value is None:
                 default_value = {}
-
-            # if path (e.g. file or dirs) does not exist, it is created
             if not required_path.exists():
                 os.makedirs(os.path.dirname(required_path), exist_ok=True)
-                with open(required_path, "w") as f:
-                    json.dump(default_value, f)
 
-            # loads and converts data from file
-            with open(required_path, "r") as f:
-                content = json.load(f)
-            data_element = convert(content, path=required_path)
+            # converts default data
+            data_element = convert(default_value, path=required_path)
             _data_elements[path_from_data_dir] = data_element
 
     finally:
         _lock.release()
     return data_element
+
+
+if __name__ == "__main__":
+    set_data_path("persistent/data")
+    d = get_json_data("test.json")
+    print(d)

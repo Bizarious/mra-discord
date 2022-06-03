@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 from threading import Lock
-from typing import TypeVar, Union, Callable, Any, Optional
+from typing import TypeVar, Union, Callable, Any, Optional, Dict, List
 
 _T = TypeVar("_T")
 _KT = TypeVar("_KT")
@@ -14,7 +14,7 @@ class Savable:
     to file as soon as it is changed, without the need to explicitly call a save function.
     """
 
-    def __init__(self, parent=None, *, path: Path):
+    def __init__(self, parent=None, *, path: Path, indent: Optional[int] = None):
         if parent is None:
             self._parent = self
         else:
@@ -27,6 +27,7 @@ class Savable:
 
         # a lock for thread safety
         self._lock = Lock()
+        self._indent = indent
 
     @property
     def parent(self) -> "Savable":
@@ -50,11 +51,26 @@ class Savable:
         if save:
             self.save()
 
+    def load(self) -> Optional[Union[Dict, List]]:
+        # makes sure that e.g. a sublist will not load the original data leading into an endless recursion
+        if self.parent is not self:
+            data = None
+
+        elif self._path.exists():
+            # otherwise, if path exists, load it
+            with open(self._path, "r") as file:
+                data = json.load(file)
+
+        else:
+            data = None
+
+        return data
+
     def save(self) -> None:
         if self._do_save:
-            if self.parent == self:
+            if self.parent is self:
                 with open(self._path, "w") as file:
-                    json.dump(self, file, indent=0)
+                    json.dump(self, file, indent=self._indent)
             else:
                 self.parent.save()
 
@@ -74,13 +90,24 @@ def _lock_and_save(func: Callable[[Savable, ...], Any]) -> Callable[[Savable, ..
 class DataDict(Savable, dict):
 
     def __init__(self, kwargs: Optional[dict] = None, *, parent: Optional[Savable] = None, path: Path):
-        # converts all elements recursively to savables
-        kwargs = kwargs or dict()
-        for key in kwargs:
-            kwargs[key] = convert(kwargs[key], path, self)
+        # must be called at first, otherwise it cannot load data in the next step
+        Savable.__init__(self, parent, path=path, indent=2)
 
-        dict.__init__(self, kwargs)
-        Savable.__init__(self, parent, path=path)
+        # tries to load existing data
+        maybe_kwargs = self.load()
+
+        if maybe_kwargs:
+            # when data exists, take that
+            actual_kwargs = maybe_kwargs
+        else:
+            # otherwise take data from constructor
+            actual_kwargs = kwargs or dict()
+
+        # converts all elements recursively to savables
+        for key in actual_kwargs:
+            actual_kwargs[key] = convert(actual_kwargs[key], path, self)
+
+        dict.__init__(self, actual_kwargs)
 
     @_lock_and_save
     def __setitem__(self, key, value):
@@ -95,12 +122,23 @@ class DataDict(Savable, dict):
 class DataList(Savable, list):
 
     def __init__(self, seq: Optional[list] = None, *, parent: Savable = None, path: Path):
-        # converts all elements recursively to data lists and data dicts
-        seq = seq or list()
-        seq = [convert(s, path, self) for s in seq]
-
-        list.__init__(self, seq)
+        # must be called at first, otherwise it cannot load data in the next step
         Savable.__init__(self, parent, path=path)
+
+        # tries to load existing data
+        maybe_seq = self.load()
+
+        if maybe_seq:
+            # when data exists, take that
+            actual_seq = maybe_seq
+        else:
+            # otherwise take data from constructor
+            actual_seq = seq or list()
+
+        # converts all elements recursively to savables
+        actual_seq = [convert(s, path, self) for s in actual_seq]
+
+        list.__init__(self, actual_seq)
 
     @_lock_and_save
     def append(self, __object: _T) -> None:
