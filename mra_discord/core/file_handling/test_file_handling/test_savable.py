@@ -85,11 +85,28 @@ def test_data_dict_bulk_save_data():
         path.unlink()
 
 
+def test_data_dict_load_and_ignore_inital_value():
+    path = Path(f"{_TEST_FILES}/test.json")
+    try:
+        pre_provided = {"a": 1, "b": 2}
+        pre_data = DataDict(pre_provided, path=path)
+        pre_data.save()
+
+        provided = {"b": 3}
+        data = DataDict(provided, path=path)
+        with open(path, "r") as file:
+            assert json.load(file) == data
+
+    finally:
+        path.unlink()
+
+
 def test_data_list_save_right_data():
     path = Path(f"{_TEST_FILES}/test.json")
     try:
         provided = [1, 2, 3, 4]
         data = DataList(provided, path=path)
+        # noinspection PyArgumentList
         data.append(5)
 
         expected = [1, 2, 3, 4, 5]
@@ -104,6 +121,7 @@ def test_data_list_save_right_data_recursive():
     try:
         provided = [1, 2, 3, 4]
         data = DataList(provided, path=path)
+        # noinspection PyArgumentList
         data.append([])
         data[4].append("a")
 
@@ -121,6 +139,7 @@ def test_data_list_not_save_data():
         data = DataList(provided, path=path)
         data.save()
         data.do_save = False
+        # noinspection PyArgumentList
         data.append(5)
 
         expected = [1, 2, 3, 4]
@@ -130,6 +149,7 @@ def test_data_list_not_save_data():
         path.unlink()
 
 
+# noinspection PyArgumentList
 def test_data_list_bulk_save_data():
     path = Path(f"{_TEST_FILES}/test.json")
     try:

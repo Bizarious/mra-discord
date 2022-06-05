@@ -1,33 +1,51 @@
 import json
+from abc import ABC, abstractmethod
 from pathlib import Path
 from threading import Lock
-from typing import TypeVar, Union, Callable, Any, Optional, Dict, List
+from typing import TypeVar, Union, Callable, Any, Optional, Dict, List, Type
 
 _T = TypeVar("_T")
 _KT = TypeVar("_KT")
 _VT = TypeVar("_VT")
+_DATA = TypeVar("_DATA")
 
 
-class Savable:
+class Savable(ABC):
     """
     Base class for savable objects. The idea is to create a custom container that saves its state
     to file as soon as it is changed, without the need to explicitly call a save function.
     """
 
-    def __init__(self, parent=None, *, path: Path, indent: Optional[int] = None):
-        if parent is None:
-            self._parent = self
-        else:
-            self._parent = parent
-
+    def __init__(
+            self, *,
+            target: Type[_DATA],
+            initial_data: _DATA,
+            parent: Optional["Savable"] = None,
+            path: Path, indent: Optional[int] = None
+    ):
+        self._parent = parent or self
         self._path = path
+        self._indent = indent
 
         # used to control if changes should be saved immediately
         self._do_save = True
 
         # a lock for thread safety
         self._lock = Lock()
-        self._indent = indent
+
+        # tries to load existing data
+        maybe_data = self.load()
+        if maybe_data:
+            if type(maybe_data) != target:
+                raise TypeError(f"Got '{type(maybe_data)}', expected '{target}'")
+            # when data exists, take that
+            actual_data = maybe_data
+        else:
+            # otherwise take data from constructor
+            actual_data = initial_data or target()
+
+        # converts all elements recursively to savables
+        target.__init__(self, self.convert_recursively(actual_data))
 
     @property
     def parent(self) -> "Savable":
@@ -50,6 +68,10 @@ class Savable:
         self._do_save = save
         if save:
             self.save()
+
+    @abstractmethod
+    def convert_recursively(self, data: _DATA) -> _DATA:
+        pass
 
     def load(self) -> Optional[Union[Dict, List]]:
         # makes sure that e.g. a sublist will not load the original data leading into an endless recursion
@@ -91,23 +113,17 @@ class DataDict(Savable, dict):
 
     def __init__(self, kwargs: Optional[dict] = None, *, parent: Optional[Savable] = None, path: Path):
         # must be called at first, otherwise it cannot load data in the next step
-        Savable.__init__(self, parent, path=path, indent=2)
+        Savable.__init__(
+            self,
+            target=dict,
+            initial_data=kwargs,
+            parent=parent,
+            path=path,
+            indent=2
+        )
 
-        # tries to load existing data
-        maybe_kwargs = self.load()
-
-        if maybe_kwargs:
-            # when data exists, take that
-            actual_kwargs = maybe_kwargs
-        else:
-            # otherwise take data from constructor
-            actual_kwargs = kwargs or dict()
-
-        # converts all elements recursively to savables
-        for key in actual_kwargs:
-            actual_kwargs[key] = convert(actual_kwargs[key], path, self)
-
-        dict.__init__(self, actual_kwargs)
+    def convert_recursively(self, data: _DATA) -> _DATA:
+        return {key: convert(value, self._path, self) for key, value in data.items()}
 
     @_lock_and_save
     def __setitem__(self, key, value):
@@ -123,22 +139,16 @@ class DataList(Savable, list):
 
     def __init__(self, seq: Optional[list] = None, *, parent: Savable = None, path: Path):
         # must be called at first, otherwise it cannot load data in the next step
-        Savable.__init__(self, parent, path=path)
+        Savable.__init__(
+            self,
+            target=list,
+            initial_data=seq,
+            parent=parent,
+            path=path
+        )
 
-        # tries to load existing data
-        maybe_seq = self.load()
-
-        if maybe_seq:
-            # when data exists, take that
-            actual_seq = maybe_seq
-        else:
-            # otherwise take data from constructor
-            actual_seq = seq or list()
-
-        # converts all elements recursively to savables
-        actual_seq = [convert(s, path, self) for s in actual_seq]
-
-        list.__init__(self, actual_seq)
+    def convert_recursively(self, data: _DATA) -> _DATA:
+        return [convert(element, self._path, self) for element in data]
 
     @_lock_and_save
     def append(self, __object: _T) -> None:
@@ -162,7 +172,7 @@ _CONVERSION_TABLE = {
 
 def convert(__object: _T, path: Path, parent: Savable = None) -> Union[_T, DataList, DataDict]:
     """
-    Converts lists into DataLists and dicts into DataDicts.
+    Converts basic types to savables.
     """
     maybe_convert_into = _CONVERSION_TABLE.get(type(__object))
     if maybe_convert_into is not None:
