@@ -16,6 +16,11 @@ def maybe_convert_str_to_path(path: Union[str, Path]) -> Path:
     return path
 
 
+def clear_data_elements():
+    global _data_elements
+    _data_elements = {}
+
+
 class DataPathError(Exception):
     pass
 
@@ -46,8 +51,7 @@ def get_json_data(path_from_data_dir: Union[str, Path], default_value: Optional[
         else:
             # if path (e.g. file or dirs) does not exist, it is created
             required_path = Path(f"{_data_path}/{path_from_data_dir}")
-            if default_value is None:
-                default_value = {}
+            default_value = default_value or {}
             if not required_path.exists():
                 os.makedirs(os.path.dirname(required_path), exist_ok=True)
 
@@ -58,9 +62,3 @@ def get_json_data(path_from_data_dir: Union[str, Path], default_value: Optional[
     finally:
         _lock.release()
     return data_element
-
-
-if __name__ == "__main__":
-    set_data_path("persistent/data")
-    d = get_json_data("test.json")
-    print(d)
