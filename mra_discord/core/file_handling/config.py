@@ -1,13 +1,14 @@
 import os
-from abc import ABC, abstractmethod
 from pathlib import Path
 from threading import Lock
-from typing import Optional, Dict, Union
+from typing import Optional, Dict, Union, Callable
 
 from dotenv import dotenv_values
 
 from core.file_handling.data import maybe_convert_str_to_path
 from core.file_handling.savable import DataDict
+
+_EXTERNAL_CATEGORY = "external"
 
 _lock = Lock()
 _config_path: Optional[Path] = None
@@ -22,6 +23,11 @@ class ConfigCategoryError(Exception):
     pass
 
 
+def clear_config_categories():
+    global _config_categories
+    _config_categories = {}
+
+
 def set_config_path(path: Union[str, Path]) -> None:
     path = maybe_convert_str_to_path(path)
     global _config_path
@@ -34,7 +40,7 @@ def set_config_path(path: Union[str, Path]) -> None:
         os.makedirs(_config_path, exist_ok=True)
 
 
-class _ConfigCategory:
+class ConfigCategory:
     """ Contains all config settings belonging to one category. """
 
     def __init__(self, name: str, initial_values: Optional[Dict] = None, *, frozen: bool = False):
@@ -55,14 +61,14 @@ class _ConfigCategory:
         return cls(name, initial_values, frozen=True)
 
 
-def get_config_category(category: str) -> _ConfigCategory:
+def get_config_category(category: str) -> ConfigCategory:
     if _config_path is None:
         raise ConfigPathError("Config path must be set")
 
     _lock.acquire()
     try:
         if category not in _config_categories:
-            category_object = _ConfigCategory(category)
+            category_object = ConfigCategory(category)
             _config_categories[category] = category_object
         else:
             category_object = _config_categories[category]
@@ -71,20 +77,34 @@ def get_config_category(category: str) -> _ConfigCategory:
     return category_object
 
 
-class ExternalConfigImporter(ABC):
+class ExternalConfigImporter:
     """ Base class for importing config settings from external sources. """
 
-    @abstractmethod
-    def extract_config_values(self, file: Path) -> Dict[str, str]:
-        pass
+    def __init__(self, path: Union[Path, str], extractor: Callable[[Path], Dict[str, str]]):
+        self._path = maybe_convert_str_to_path(path)
+        self._extractor = extractor
 
-    def import_from_file(self, file: Union[str, Path]):
-        pass
+    def import_from_file(self) -> None:
+        if _EXTERNAL_CATEGORY in _config_categories:
+            raise ConfigCategoryError(f"Category '{_EXTERNAL_CATEGORY}' does already exist")
+
+        raw_config_data = self._extractor(self._path)
+
+        # converts all key to upper as a unified interface for all sources
+        refined_config_data = {key.upper(): value for key, value in raw_config_data.items()}
+        external = ConfigCategory.frozen(_EXTERNAL_CATEGORY, refined_config_data)
+        _config_categories["external"] = external
 
 
 class EnvConfigImporter(ExternalConfigImporter):
     """ Imports config settings from .env files. """
-    pass
+
+    def __init__(self, path: Union[Path, str]):
+        ExternalConfigImporter.__init__(self, path, self.extract_env_data)
+
+    @staticmethod
+    def extract_env_data(path: Path) -> Dict[str, str]:
+        return dotenv_values(path)
 
 
 class JsonConfigImporter(ExternalConfigImporter):
