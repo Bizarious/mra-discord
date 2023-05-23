@@ -1,4 +1,4 @@
-requests==2.24.0
+requests==2.31.0
 tabulate==0.8.7
 discord.py==1.5.1
 aiohttp==3.6.2
