@@ -1,5 +1,5 @@
 requests==2.24.0
 tabulate==0.8.7
 discord.py==1.5.1
-aiohttp==3.6.2
+aiohttp==3.8.5
 croniter==0.3.35
